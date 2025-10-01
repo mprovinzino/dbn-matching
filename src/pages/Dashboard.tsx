@@ -47,26 +47,14 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        toast({
-          title: "Authentication Required",
-          description: "You must be logged in to load investor data",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-      
       toast({
         title: "Importing Full Network",
         description: "Loading all investors from your Excel file. This may take a few minutes...",
       });
       
       const { seedFullInvestorNetwork } = await import('@/utils/seedFullInvestorNetwork');
-      const results = await seedFullInvestorNetwork(user.id);
+      // Using dummy user ID since RLS is temporarily disabled
+      const results = await seedFullInvestorNetwork("00000000-0000-0000-0000-000000000000");
       
       const successCount = results.filter(r => r.success).length;
       const failedCount = results.filter(r => !r.success).length;
