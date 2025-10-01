@@ -21,9 +21,9 @@ interface InvestorCardProps {
 
 export function InvestorCard({ investor, onClick }: InvestorCardProps) {
   const getTierColor = (tier: number) => {
-    if (tier <= 3) return "tier-1-3";
-    if (tier <= 6) return "tier-4-6";
-    return "tier-7-10";
+    if (tier <= 3) return "bg-[hsl(var(--tier-1-3))] hover:bg-[hsl(var(--tier-1-3))]/90";
+    if (tier <= 6) return "bg-[hsl(var(--tier-4-6))] hover:bg-[hsl(var(--tier-4-6))]/90";
+    return "bg-[hsl(var(--tier-7-10))] hover:bg-[hsl(var(--tier-7-10))]/90";
   };
 
   const getStatusBadge = () => {
@@ -35,7 +35,7 @@ export function InvestorCard({ investor, onClick }: InvestorCardProps) {
       return <Badge variant="secondary">TEST</Badge>;
     }
     if (tags.includes("Active")) {
-      return <Badge className="bg-green-600 hover:bg-green-700">Active</Badge>;
+      return <Badge className="bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/90 text-white">Active</Badge>;
     }
     return null;
   };
@@ -54,7 +54,7 @@ export function InvestorCard({ investor, onClick }: InvestorCardProps) {
               <p className="text-sm text-muted-foreground">{investor.main_poc}</p>
             </div>
           </div>
-          <Badge className={`bg-${getTierColor(investor.tier)}`}>
+          <Badge className={getTierColor(investor.tier)}>
             Tier {investor.tier}
           </Badge>
         </div>

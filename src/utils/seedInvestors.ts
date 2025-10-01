@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeInvestorData, parseBuyBox, InvestorData } from "./parseInvestorData";
+import * as XLSX from 'xlsx';
 
 // Sample investor data from your Excel file
 const investorDataSample: InvestorData[] = [
@@ -194,7 +195,49 @@ Other Notes: N/A`,
 export async function seedInvestors(userId: string) {
   const results = [];
   
-  for (const investorData of investorDataSample) {
+  // Try to load from Excel file first, fallback to sample data
+  let investorsList = investorDataSample;
+  
+  try {
+    const response = await fetch('/src/data/investors.xlsx');
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      
+      const parsedInvestors: InvestorData[] = [];
+      
+      // Process each sheet
+      for (const sheetName of workbook.SheetNames) {
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Determine market type from sheet name
+        let marketType: 'direct_purchase' | 'primary' | 'secondary' = 'direct_purchase';
+        if (sheetName.toLowerCase().includes('primary')) {
+          marketType = 'primary';
+        } else if (sheetName.toLowerCase().includes('secondary')) {
+          marketType = 'secondary';
+        }
+        
+        for (const row of jsonData) {
+          try {
+            const investorData = normalizeInvestorData({ ...(row as Record<string, any>), marketType });
+            parsedInvestors.push(investorData);
+          } catch (error) {
+            console.error('Error parsing row:', error, row);
+          }
+        }
+      }
+      
+      if (parsedInvestors.length > 0) {
+        investorsList = parsedInvestors;
+      }
+    }
+  } catch (error) {
+    console.log('Using sample data - could not load Excel file:', error);
+  }
+  
+  for (const investorData of investorsList) {
     try {
       // Parse buy box data
       const buyBoxParsed = parseBuyBox(investorData.buyBox);
