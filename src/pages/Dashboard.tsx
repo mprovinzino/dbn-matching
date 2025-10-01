@@ -36,6 +36,12 @@ const Dashboard = () => {
 
       if (error) throw error;
       setInvestors(data || []);
+      
+      // Auto-import full network if this looks like initial/sample data
+      if (data && data.length <= 6) {
+        console.log('Detected sample data, auto-importing full investor network...');
+        await handleSeedData();
+      }
     } catch (error) {
       console.error('Error loading investors:', error);
     } finally {
@@ -136,16 +142,11 @@ const Dashboard = () => {
       <header className="border-b bg-sidebar-background">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Clever Offers</h1>
-              <p className="text-sm text-muted-foreground">Investor Management System</p>
-            </div>
-            {investors.length === 0 && (
-              <Button onClick={handleSeedData}>
-                Load Investor Network
-              </Button>
-            )}
+          <div>
+            <h1 className="text-2xl font-bold">Clever Offers</h1>
+            <p className="text-sm text-muted-foreground">Investor Management System</p>
           </div>
+        </div>
         </div>
       </header>
 
@@ -218,15 +219,12 @@ const Dashboard = () => {
         {investors.length === 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle>No Investors Yet</CardTitle>
+              <CardTitle>Loading Your Investor Network</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">
-                Get started by loading your investor network
+              <p className="text-muted-foreground">
+                Importing your full investor network automatically...
               </p>
-              <Button onClick={handleSeedData}>
-                Load Investor Network
-              </Button>
             </CardContent>
           </Card>
         ) : (
