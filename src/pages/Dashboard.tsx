@@ -47,14 +47,26 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
+      // Get the current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        toast({
+          title: "Authentication Required",
+          description: "You must be logged in to migrate data",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
       toast({
         title: "Starting Migration",
         description: "Migrating your investor data to the database. This may take a few minutes...",
       });
       
       const { migrateInvestorsToDatabase } = await import('@/utils/migrateInvestorsToDatabase');
-      // Using dummy user ID since RLS is temporarily disabled
-      const result = await migrateInvestorsToDatabase("00000000-0000-0000-0000-000000000000");
+      const result = await migrateInvestorsToDatabase(user.id);
       
       if (result.success) {
         toast({
