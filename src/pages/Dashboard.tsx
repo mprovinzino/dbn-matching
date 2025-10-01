@@ -216,6 +216,13 @@ const Dashboard = () => {
           </Button>
         </div>
 
+        {/* Re-import Data Button */}
+        <div className="mb-4 flex justify-end">
+          <Button variant="outline" onClick={handleMigrateData}>
+            Re-import Full Investor Data
+          </Button>
+        </div>
+
         {/* Investor Grid */}
         {investors.length === 0 ? (
           <Card>
