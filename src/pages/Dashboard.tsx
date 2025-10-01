@@ -1,40 +1,103 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Building2, Users, TrendingUp, Plus, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { InvestorCard } from "@/components/InvestorCard";
+import { InvestorDetailModal } from "@/components/InvestorDetailModal";
+import { useToast } from "@/hooks/use-toast";
+import { seedInvestors } from "@/utils/seedInvestors";
 
 const Dashboard = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [investors, setInvestors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedInvestor, setSelectedInvestor] = useState<any>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedBuyBox, setSelectedBuyBox] = useState<any>(null);
+  const [selectedMarkets, setSelectedMarkets] = useState<any[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    loadInvestors();
+  }, []);
+
+  const loadInvestors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('investors')
+        .select('*')
+        .order('tier', { ascending: true });
+
+      if (error) throw error;
+      setInvestors(data || []);
+    } catch (error) {
+      console.error('Error loading investors:', error);
+    } finally {
       setLoading(false);
-      if (!session) {
-        navigate("/auth");
-      }
-    });
+    }
+  };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session) {
-        navigate("/auth");
-      }
-    });
+  const handleSeedData = async () => {
+    try {
+      setLoading(true);
+      // Use a fixed user ID for demo purposes (since we removed auth)
+      const demoUserId = '00000000-0000-0000-0000-000000000000';
+      const results = await seedInvestors(demoUserId);
+      const successCount = results.filter(r => r.success).length;
+      
+      toast({
+        title: "Data Seeded Successfully",
+        description: `Imported ${successCount} investors`,
+      });
+      
+      await loadInvestors();
+    } catch (error) {
+      console.error('Error seeding data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to import investor data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  const handleInvestorClick = async (investor: any) => {
+    setSelectedInvestor(investor);
+    
+    // Load buy box
+    const { data: buyBox } = await supabase
+      .from('buy_box')
+      .select('*')
+      .eq('investor_id', investor.id)
+      .single();
+    
+    setSelectedBuyBox(buyBox);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
+    // Load markets
+    const { data: markets } = await supabase
+      .from('markets')
+      .select('*')
+      .eq('investor_id', investor.id);
+    
+    setSelectedMarkets(markets || []);
+    setDetailModalOpen(true);
+  };
+
+  const filteredInvestors = investors.filter(investor =>
+    investor.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    investor.main_poc.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const stats = {
+    total: investors.length,
+    active: investors.filter(i => i.tags?.includes('Active')).length,
+    avgTier: investors.length > 0 
+      ? (investors.reduce((acc, i) => acc + i.tier, 0) / investors.length).toFixed(1)
+      : '-'
   };
 
   if (loading) {
@@ -47,17 +110,18 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-primary">Clever Offers</h1>
-            <p className="text-sm text-muted-foreground">Investor Management System</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
-            <Button variant="outline" onClick={handleSignOut}>
-              Sign Out
-            </Button>
+      <header className="border-b bg-sidebar-background">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Clever Offers</h1>
+              <p className="text-sm text-muted-foreground">Investor Management System</p>
+            </div>
+            {investors.length === 0 && (
+              <Button onClick={handleSeedData}>
+                Import Sample Data
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -66,10 +130,11 @@ const Dashboard = () => {
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Dashboard</h2>
           <p className="text-muted-foreground">
-            Welcome back! Here's an overview of your investor network.
+            Manage your investor network and track opportunities.
           </p>
         </div>
 
+        {/* Stats */}
         <div className="grid gap-6 md:grid-cols-3 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -77,8 +142,10 @@ const Dashboard = () => {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">No investors added yet</p>
+              <div className="text-2xl font-bold">{stats.total}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.total === 0 ? 'No investors yet' : 'In your network'}
+              </p>
             </CardContent>
           </Card>
 
@@ -88,7 +155,7 @@ const Dashboard = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{stats.active}</div>
               <p className="text-xs text-muted-foreground">Ready to receive leads</p>
             </CardContent>
           </Card>
@@ -99,26 +166,74 @@ const Dashboard = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">-</div>
+              <div className="text-2xl font-bold">{stats.avgTier}</div>
               <p className="text-xs text-muted-foreground">Across all investors</p>
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Get Started</CardTitle>
-            <CardDescription>
-              Begin by adding your first investor to the system
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button>
-              Add Investor
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Search and Actions */}
+        <div className="flex gap-4 mb-6">
+          <div className="flex-1">
+            <Input
+              placeholder="Search investors by name or POC..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Investor
+          </Button>
+          <Button variant="outline">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+        </div>
+
+        {/* Investor Grid */}
+        {investors.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>No Investors Yet</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Get started by importing your investor data
+              </p>
+              <Button onClick={handleSeedData}>
+                Import Sample Data
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredInvestors.map((investor) => (
+              <InvestorCard
+                key={investor.id}
+                investor={investor}
+                onClick={() => handleInvestorClick(investor)}
+              />
+            ))}
+          </div>
+        )}
+
+        {filteredInvestors.length === 0 && investors.length > 0 && (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <p className="text-muted-foreground">No investors match your search</p>
+            </CardContent>
+          </Card>
+        )}
       </main>
+
+      <InvestorDetailModal
+        open={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        investor={selectedInvestor}
+        buyBox={selectedBuyBox}
+        markets={selectedMarkets}
+      />
     </div>
   );
 };
