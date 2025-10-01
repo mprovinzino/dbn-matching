@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,18 +10,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-interface AddInvestorFormProps {
+interface EditInvestorFormProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  investor: any;
+  buyBox: any;
+  markets: any[];
 }
 
-export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormProps) {
+export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, markets }: EditInvestorFormProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Form data
   const [formData, setFormData] = useState({
     company_name: "",
     main_poc: "",
@@ -33,7 +35,6 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
     offer_types: [] as string[],
     tags: [] as string[],
     freeze_reason: "",
-    // Buy Box
     property_types: [] as string[],
     on_market_status: [] as string[],
     year_built_min: undefined as number | undefined,
@@ -44,12 +45,45 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
     timeframe: [] as string[],
     lead_types: [] as string[],
     buy_box_notes: "",
-    // Markets
     primary_states: [] as string[],
     primary_zip_codes: "",
     secondary_states: [] as string[],
     secondary_zip_codes: "",
   });
+
+  useEffect(() => {
+    if (investor && open) {
+      const primaryMarket = markets?.find(m => m.market_type === 'primary');
+      const secondaryMarket = markets?.find(m => m.market_type === 'secondary');
+
+      setFormData({
+        company_name: investor.company_name || "",
+        main_poc: investor.main_poc || "",
+        hubspot_url: investor.hubspot_url || "",
+        coverage_type: investor.coverage_type || "local",
+        tier: investor.tier || 1,
+        weekly_cap: investor.weekly_cap || 0,
+        cold_accepts: investor.cold_accepts || false,
+        offer_types: investor.offer_types || [],
+        tags: investor.tags || [],
+        freeze_reason: investor.freeze_reason || "",
+        property_types: buyBox?.property_types || [],
+        on_market_status: buyBox?.on_market_status || [],
+        year_built_min: buyBox?.year_built_min,
+        year_built_max: buyBox?.year_built_max,
+        price_min: buyBox?.price_min,
+        price_max: buyBox?.price_max,
+        condition_types: buyBox?.condition_types || [],
+        timeframe: buyBox?.timeframe || [],
+        lead_types: buyBox?.lead_types || [],
+        buy_box_notes: buyBox?.notes || "",
+        primary_states: primaryMarket?.states || [],
+        primary_zip_codes: primaryMarket?.zip_codes?.join(', ') || "",
+        secondary_states: secondaryMarket?.states || [],
+        secondary_zip_codes: secondaryMarket?.zip_codes?.join(', ') || "",
+      });
+    }
+  }, [investor, buyBox, markets, open]);
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -70,24 +104,10 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        toast({
-          title: "Authentication Required",
-          description: "You must be logged in to add an investor",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Insert investor
-      const { data: investor, error: investorError } = await supabase
+      // Update investor
+      const { error: investorError } = await supabase
         .from('investors')
-        .insert([{
-          user_id: user.id,
+        .update({
           company_name: formData.company_name,
           main_poc: formData.main_poc,
           hubspot_url: formData.hubspot_url || null,
@@ -98,29 +118,37 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
           offer_types: formData.offer_types,
           tags: formData.tags,
           freeze_reason: formData.freeze_reason || null,
-        }])
-        .select()
-        .single();
+        })
+        .eq('id', investor.id);
 
       if (investorError) throw investorError;
 
-      // Insert buy box
-      await supabase.from('buy_box').insert({
-        investor_id: investor.id,
-        property_types: formData.property_types,
-        on_market_status: formData.on_market_status,
-        year_built_min: formData.year_built_min,
-        year_built_max: formData.year_built_max,
-        price_min: formData.price_min,
-        price_max: formData.price_max,
-        condition_types: formData.condition_types,
-        timeframe: formData.timeframe,
-        lead_types: formData.lead_types,
-        notes: formData.buy_box_notes,
-      });
+      // Update buy box
+      if (buyBox) {
+        await supabase.from('buy_box').update({
+          property_types: formData.property_types,
+          on_market_status: formData.on_market_status,
+          year_built_min: formData.year_built_min,
+          year_built_max: formData.year_built_max,
+          price_min: formData.price_min,
+          price_max: formData.price_max,
+          condition_types: formData.condition_types,
+          timeframe: formData.timeframe,
+          lead_types: formData.lead_types,
+          notes: formData.buy_box_notes,
+        }).eq('investor_id', investor.id);
+      }
 
-      // Insert markets
-      if (formData.primary_states.length > 0 || formData.primary_zip_codes) {
+      // Update markets
+      const primaryMarket = markets?.find(m => m.market_type === 'primary');
+      const secondaryMarket = markets?.find(m => m.market_type === 'secondary');
+
+      if (primaryMarket) {
+        await supabase.from('markets').update({
+          states: formData.primary_states,
+          zip_codes: formData.primary_zip_codes.split(',').map(z => z.trim()).filter(Boolean),
+        }).eq('id', primaryMarket.id);
+      } else if (formData.primary_states.length > 0 || formData.primary_zip_codes) {
         await supabase.from('markets').insert({
           investor_id: investor.id,
           market_type: 'primary',
@@ -129,7 +157,12 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
         });
       }
 
-      if (formData.secondary_states.length > 0 || formData.secondary_zip_codes) {
+      if (secondaryMarket) {
+        await supabase.from('markets').update({
+          states: formData.secondary_states,
+          zip_codes: formData.secondary_zip_codes.split(',').map(z => z.trim()).filter(Boolean),
+        }).eq('id', secondaryMarket.id);
+      } else if (formData.secondary_states.length > 0 || formData.secondary_zip_codes) {
         await supabase.from('markets').insert({
           investor_id: investor.id,
           market_type: 'secondary',
@@ -139,17 +172,17 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
       }
 
       toast({
-        title: "Investor Added",
-        description: "Successfully added new investor",
+        title: "Investor Updated",
+        description: "Successfully updated investor information",
       });
 
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error adding investor:', error);
+      console.error('Error updating investor:', error);
       toast({
         title: "Error",
-        description: "Failed to add investor",
+        description: "Failed to update investor",
         variant: "destructive",
       });
     } finally {
@@ -354,7 +387,7 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Investor - Step {step} of 3</DialogTitle>
+          <DialogTitle>Edit Investor - Step {step} of 3</DialogTitle>
         </DialogHeader>
 
         <div className="py-4">
@@ -379,7 +412,7 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
             </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={loading || !formData.company_name || !formData.main_poc}>
-              {loading ? 'Adding...' : 'Add Investor'}
+              {loading ? 'Updating...' : 'Update Investor'}
             </Button>
           )}
         </div>

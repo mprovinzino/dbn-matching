@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { InvestorCard } from "@/components/InvestorCard";
 import { InvestorDetailModal } from "@/components/InvestorDetailModal";
 import { AddInvestorForm } from "@/components/AddInvestorForm";
+import { EditInvestorForm } from "@/components/EditInvestorForm";
 import { useToast } from "@/hooks/use-toast";
 import { seedActualInvestors } from "@/utils/seedActualInvestors";
 
@@ -17,6 +18,7 @@ const Dashboard = () => {
   const [selectedInvestor, setSelectedInvestor] = useState<any>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedBuyBox, setSelectedBuyBox] = useState<any>(null);
   const [selectedMarkets, setSelectedMarkets] = useState<any[]>([]);
   const { toast } = useToast();
@@ -259,8 +261,31 @@ const Dashboard = () => {
       </main>
 
       <InvestorDetailModal
-        open={detailModalOpen}
-        onClose={() => setDetailModalOpen(false)}
+        open={detailModalOpen && !editModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setSelectedInvestor(null);
+        }}
+        investor={selectedInvestor}
+        buyBox={selectedBuyBox}
+        markets={selectedMarkets}
+        onEdit={() => {
+          setDetailModalOpen(false);
+          setEditModalOpen(true);
+        }}
+      />
+
+      <EditInvestorForm
+        open={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setSelectedInvestor(null);
+        }}
+        onSuccess={() => {
+          loadInvestors();
+          setEditModalOpen(false);
+          setSelectedInvestor(null);
+        }}
         investor={selectedInvestor}
         buyBox={selectedBuyBox}
         markets={selectedMarkets}

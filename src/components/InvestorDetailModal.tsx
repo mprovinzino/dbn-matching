@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Building2, ExternalLink } from "lucide-react";
+import { AlertCircle, Building2, ExternalLink, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -12,6 +12,7 @@ interface InvestorDetailModalProps {
   investor: any;
   buyBox: any;
   markets: any[];
+  onEdit: () => void;
 }
 
 export function InvestorDetailModal({ 
@@ -19,7 +20,8 @@ export function InvestorDetailModal({
   onClose, 
   investor, 
   buyBox,
-  markets 
+  markets,
+  onEdit
 }: InvestorDetailModalProps) {
   if (!investor) return null;
 
@@ -34,16 +36,22 @@ export function InvestorDetailModal({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start justify-between">
-            <div>
+            <div className="flex-1">
               <DialogTitle className="text-2xl flex items-center gap-3">
                 <Building2 className="h-6 w-6" />
                 {investor.company_name}
               </DialogTitle>
               <p className="text-muted-foreground mt-1">{investor.main_poc}</p>
             </div>
-            <Badge className={`bg-${getTierColor(investor.tier)}`}>
-              Tier {investor.tier}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={`bg-${getTierColor(investor.tier)}`}>
+                Tier {investor.tier}
+              </Badge>
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
