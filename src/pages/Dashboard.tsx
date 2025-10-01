@@ -9,7 +9,6 @@ import { InvestorDetailModal } from "@/components/InvestorDetailModal";
 import { AddInvestorForm } from "@/components/AddInvestorForm";
 import { EditInvestorForm } from "@/components/EditInvestorForm";
 import { useToast } from "@/hooks/use-toast";
-import { seedActualInvestors } from "@/utils/seedActualInvestors";
 
 const Dashboard = () => {
   const [investors, setInvestors] = useState<any[]>([]);
@@ -29,6 +28,7 @@ const Dashboard = () => {
 
   const loadInvestors = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('investors')
         .select('*')
@@ -36,12 +36,6 @@ const Dashboard = () => {
 
       if (error) throw error;
       setInvestors(data || []);
-      
-      // Auto-import full network if this looks like initial/sample data
-      if (data && data.length <= 6) {
-        console.log('Detected sample data, auto-importing full investor network...');
-        await handleSeedData();
-      }
     } catch (error) {
       console.error('Error loading investors:', error);
     } finally {
@@ -49,44 +43,39 @@ const Dashboard = () => {
     }
   };
 
-  const handleSeedData = async () => {
+  const handleMigrateData = async () => {
     try {
       setLoading(true);
       
       toast({
-        title: "Importing Full Network",
-        description: "Loading all investors from your Excel file. This may take a few minutes...",
+        title: "Starting Migration",
+        description: "Migrating your investor data to the database. This may take a few minutes...",
       });
       
-      const { seedFullInvestorNetwork } = await import('@/utils/seedFullInvestorNetwork');
+      const { migrateInvestorsToDatabase } = await import('@/utils/migrateInvestorsToDatabase');
       // Using dummy user ID since RLS is temporarily disabled
-      const results = await seedFullInvestorNetwork("00000000-0000-0000-0000-000000000000");
+      const result = await migrateInvestorsToDatabase("00000000-0000-0000-0000-000000000000");
       
-      const successCount = results.filter(r => r.success).length;
-      const failedCount = results.filter(r => !r.success).length;
-      
-      if (successCount > 0) {
+      if (result.success) {
         toast({
-          title: "Import Complete!",
-          description: `Successfully imported ${successCount} of ${results.length} investors from your network`,
+          title: "Migration Complete!",
+          description: `Successfully migrated ${result.successCount} investors to the database.`,
         });
-      }
-      
-      if (failedCount > 0) {
-        console.error('Failed to import some investors:', results.filter(r => !r.success));
+      } else {
         toast({
-          title: "Partial Import",
-          description: `${failedCount} investor(s) failed to import. Check console for details.`,
+          title: "Migration Completed with Errors",
+          description: `Migrated ${result.successCount} investors, ${result.failedCount} failed. Check console for details.`,
           variant: "destructive"
         });
+        console.error('Migration errors:', result.errors);
       }
       
       await loadInvestors();
     } catch (error) {
-      console.error('Error seeding data:', error);
+      console.error('Error migrating data:', error);
       toast({
         title: "Error",
-        description: "Failed to import investor data. Check console for details.",
+        description: "Failed to migrate investor data. Check console for details.",
         variant: "destructive"
       });
     } finally {
@@ -219,12 +208,15 @@ const Dashboard = () => {
         {investors.length === 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle>Loading Your Investor Network</CardTitle>
+              <CardTitle>No Investors Yet</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Importing your full investor network automatically...
+              <p className="text-muted-foreground mb-4">
+                Click the button below to migrate your investor data to the database.
               </p>
+              <Button onClick={handleMigrateData}>
+                Migrate Investor Data
+              </Button>
             </CardContent>
           </Card>
         ) : (
