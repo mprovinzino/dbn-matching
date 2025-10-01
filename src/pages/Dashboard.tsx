@@ -6,8 +6,9 @@ import { Building2, Users, TrendingUp, Plus, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InvestorCard } from "@/components/InvestorCard";
 import { InvestorDetailModal } from "@/components/InvestorDetailModal";
+import { AddInvestorForm } from "@/components/AddInvestorForm";
 import { useToast } from "@/hooks/use-toast";
-import { seedInvestors } from "@/utils/seedInvestors";
+import { seedActualInvestors } from "@/utils/seedActualInvestors";
 
 const Dashboard = () => {
   const [investors, setInvestors] = useState<any[]>([]);
@@ -15,6 +16,7 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvestor, setSelectedInvestor] = useState<any>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedBuyBox, setSelectedBuyBox] = useState<any>(null);
   const [selectedMarkets, setSelectedMarkets] = useState<any[]>([]);
   const { toast } = useToast();
@@ -44,12 +46,12 @@ const Dashboard = () => {
       setLoading(true);
       // Use a fixed user ID for demo purposes (since we removed auth)
       const demoUserId = '00000000-0000-0000-0000-000000000000';
-      const results = await seedInvestors(demoUserId);
+      const results = await seedActualInvestors(demoUserId);
       const successCount = results.filter(r => r.success).length;
       
       toast({
-        title: "Data Seeded Successfully",
-        description: `Imported ${successCount} investors`,
+        title: "Investors Loaded Successfully",
+        description: `Imported ${successCount} investors from your network`,
       });
       
       await loadInvestors();
@@ -119,7 +121,7 @@ const Dashboard = () => {
             </div>
             {investors.length === 0 && (
               <Button onClick={handleSeedData}>
-                Import Sample Data
+                Load Investor Network
               </Button>
             )}
           </div>
@@ -181,7 +183,7 @@ const Dashboard = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button>
+          <Button onClick={() => setAddModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Investor
           </Button>
@@ -199,10 +201,10 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-4">
-                Get started by importing your investor data
+                Get started by loading your investor network
               </p>
               <Button onClick={handleSeedData}>
-                Import Sample Data
+                Load Investor Network
               </Button>
             </CardContent>
           </Card>
@@ -233,6 +235,12 @@ const Dashboard = () => {
         investor={selectedInvestor}
         buyBox={selectedBuyBox}
         markets={selectedMarkets}
+      />
+
+      <AddInvestorForm
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSuccess={loadInvestors}
       />
     </div>
   );
