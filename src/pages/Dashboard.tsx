@@ -44,22 +44,51 @@ const Dashboard = () => {
   const handleSeedData = async () => {
     try {
       setLoading(true);
-      // Use a fixed user ID for demo purposes (since we removed auth)
-      const demoUserId = '00000000-0000-0000-0000-000000000000';
-      const results = await seedActualInvestors(demoUserId);
-      const successCount = results.filter(r => r.success).length;
+      
+      // Get the current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        toast({
+          title: "Authentication Required",
+          description: "You must be logged in to load investor data",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
       
       toast({
-        title: "Investors Loaded Successfully",
-        description: `Imported ${successCount} investors from your network`,
+        title: "Loading Investors",
+        description: "Importing your investor network...",
       });
+      
+      const results = await seedActualInvestors(user.id);
+      const successCount = results.filter(r => r.success).length;
+      const failedCount = results.filter(r => !r.success).length;
+      
+      if (successCount > 0) {
+        toast({
+          title: "Investors Loaded Successfully",
+          description: `Imported ${successCount} of ${results.length} investors from your network`,
+        });
+      }
+      
+      if (failedCount > 0) {
+        console.error('Failed to import some investors:', results.filter(r => !r.success));
+        toast({
+          title: "Partial Import",
+          description: `${failedCount} investor(s) failed to import. Check console for details.`,
+          variant: "destructive"
+        });
+      }
       
       await loadInvestors();
     } catch (error) {
       console.error('Error seeding data:', error);
       toast({
         title: "Error",
-        description: "Failed to import investor data",
+        description: "Failed to import investor data. Check console for details.",
         variant: "destructive"
       });
     } finally {
