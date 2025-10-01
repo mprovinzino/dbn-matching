@@ -61,18 +61,20 @@ const Dashboard = () => {
       }
       
       toast({
-        title: "Loading Investors",
-        description: "Importing your investor network...",
+        title: "Importing Full Network",
+        description: "Loading all investors from your Excel file. This may take a few minutes...",
       });
       
-      const results = await seedActualInvestors(user.id);
+      const { seedFullInvestorNetwork } = await import('@/utils/seedFullInvestorNetwork');
+      const results = await seedFullInvestorNetwork(user.id);
+      
       const successCount = results.filter(r => r.success).length;
       const failedCount = results.filter(r => !r.success).length;
       
       if (successCount > 0) {
         toast({
-          title: "Investors Loaded Successfully",
-          description: `Imported ${successCount} of ${results.length} investors from your network`,
+          title: "Import Complete!",
+          description: `Successfully imported ${successCount} of ${results.length} investors from your network`,
         });
       }
       
