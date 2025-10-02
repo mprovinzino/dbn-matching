@@ -8,6 +8,7 @@ import { InvestorCard } from "@/components/InvestorCard";
 import { InvestorDetailModal } from "@/components/InvestorDetailModal";
 import { AddInvestorForm } from "@/components/AddInvestorForm";
 import { EditInvestorForm } from "@/components/EditInvestorForm";
+import { LeadMatchingSearch } from "@/components/LeadMatchingSearch";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
@@ -22,6 +23,7 @@ const Dashboard = () => {
   const [selectedMarkets, setSelectedMarkets] = useState<any[]>([]);
   const [importProgress, setImportProgress] = useState<string | null>(null);
   const [hasCheckedForSeed, setHasCheckedForSeed] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -160,10 +162,15 @@ const Dashboard = () => {
     setDetailModalOpen(true);
   };
 
-  const filteredInvestors = investors.filter(investor =>
-    investor.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    investor.main_poc.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredInvestors = investors.filter(investor => {
+    const matchesSearch = 
+      investor.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      investor.main_poc.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = !statusFilter || investor.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const stats = {
     total: investors.length,
@@ -225,39 +232,63 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-l-2 border-l-green-500 bg-muted/30">
+          <Card 
+            className={`border-l-2 border-l-green-500 bg-muted/30 cursor-pointer transition-all hover:shadow-md ${
+              statusFilter === 'active' ? 'ring-2 ring-green-500' : ''
+            }`}
+            onClick={() => setStatusFilter(statusFilter === 'active' ? null : 'active')}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
               <CardTitle className="text-sm font-medium">Active Investors</CardTitle>
               <Users className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="text-xl font-bold">{stats.active}</div>
-              <p className="text-xs text-muted-foreground">Ready to receive leads</p>
+              <p className="text-xs text-muted-foreground">
+                {statusFilter === 'active' ? 'Click to show all' : 'Ready to receive leads'}
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-2 border-l-blue-500 bg-muted/30">
+          <Card 
+            className={`border-l-2 border-l-blue-500 bg-muted/30 cursor-pointer transition-all hover:shadow-md ${
+              statusFilter === 'test' ? 'ring-2 ring-blue-500' : ''
+            }`}
+            onClick={() => setStatusFilter(statusFilter === 'test' ? null : 'test')}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
               <CardTitle className="text-sm font-medium">Test Investors</CardTitle>
               <FlaskConical className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="text-xl font-bold">{stats.test}</div>
-              <p className="text-xs text-muted-foreground">In testing phase</p>
+              <p className="text-xs text-muted-foreground">
+                {statusFilter === 'test' ? 'Click to show all' : 'In testing phase'}
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-2 border-l-amber-500 bg-muted/30">
+          <Card 
+            className={`border-l-2 border-l-amber-500 bg-muted/30 cursor-pointer transition-all hover:shadow-md ${
+              statusFilter === 'paused' ? 'ring-2 ring-amber-500' : ''
+            }`}
+            onClick={() => setStatusFilter(statusFilter === 'paused' ? null : 'paused')}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
               <CardTitle className="text-sm font-medium">Paused Investors</CardTitle>
               <PauseCircle className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="text-xl font-bold">{stats.paused}</div>
-              <p className="text-xs text-muted-foreground">Temporarily on hold</p>
+              <p className="text-xs text-muted-foreground">
+                {statusFilter === 'paused' ? 'Click to show all' : 'Temporarily on hold'}
+              </p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Lead Matching Search */}
+        <LeadMatchingSearch />
 
         {/* Search and Actions */}
         <div className="flex gap-4 mb-6">
