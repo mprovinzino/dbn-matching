@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, TrendingUp, Plus, Filter } from "lucide-react";
+import { Building2, Users, Plus, Filter, FlaskConical, PauseCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InvestorCard } from "@/components/InvestorCard";
 import { InvestorDetailModal } from "@/components/InvestorDetailModal";
@@ -167,10 +167,9 @@ const Dashboard = () => {
 
   const stats = {
     total: investors.length,
-    active: investors.filter(i => i.tags?.includes('Active')).length,
-    avgTier: investors.length > 0 
-      ? (investors.reduce((acc, i) => acc + i.tier, 0) / investors.length).toFixed(1)
-      : '-'
+    active: investors.filter(i => i.status === 'active').length,
+    test: investors.filter(i => i.status === 'test').length,
+    paused: investors.filter(i => i.status === 'paused').length,
   };
 
   if (loading || importProgress) {
@@ -212,7 +211,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Investors</CardTitle>
@@ -226,10 +225,10 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-green-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Investors</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.active}</div>
@@ -237,14 +236,25 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-blue-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Tier</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Test Investors</CardTitle>
+              <FlaskConical className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.avgTier}</div>
-              <p className="text-xs text-muted-foreground">Across all investors</p>
+              <div className="text-2xl font-bold">{stats.test}</div>
+              <p className="text-xs text-muted-foreground">In testing phase</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-amber-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Paused Investors</CardTitle>
+              <PauseCircle className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.paused}</div>
+              <p className="text-xs text-muted-foreground">Temporarily on hold</p>
             </CardContent>
           </Card>
         </div>
