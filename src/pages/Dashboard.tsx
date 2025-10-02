@@ -20,6 +20,8 @@ const Dashboard = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedBuyBox, setSelectedBuyBox] = useState<any>(null);
   const [selectedMarkets, setSelectedMarkets] = useState<any[]>([]);
+  const [importProgress, setImportProgress] = useState<string | null>(null);
+  const [hasCheckedForImport, setHasCheckedForImport] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,6 +38,12 @@ const Dashboard = () => {
 
       if (error) throw error;
       setInvestors(data || []);
+      
+      // Auto-import if no investors and haven't checked yet
+      if ((data || []).length === 0 && !hasCheckedForImport) {
+        setHasCheckedForImport(true);
+        await handleAutoImport();
+      }
     } catch (error) {
       console.error('Error loading investors:', error);
     } finally {
@@ -43,57 +51,47 @@ const Dashboard = () => {
     }
   };
 
-  const handleMigrateData = async () => {
+  const handleAutoImport = async () => {
     try {
-      setLoading(true);
-      
-      // Get the current authenticated user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !user) {
-        toast({
-          title: "Authentication Required",
-          description: "You must be logged in to migrate data",
-          variant: "destructive",
-        });
-        setLoading(false);
+        console.error('No authenticated user for auto-import');
         return;
       }
       
-      toast({
-        title: "Starting Migration",
-        description: "Migrating your investor data to the database. This may take a few minutes...",
-      });
+      setImportProgress("Importing your investor network...");
       
       const { migrateInvestorsToDatabase } = await import('@/utils/migrateInvestorsToDatabase');
       const result = await migrateInvestorsToDatabase(user.id);
       
       if (result.success) {
         toast({
-          title: "Migration Complete!",
-          description: `Successfully migrated ${result.successCount} investors to the database.`,
+          title: "Welcome! 🎉",
+          description: `Successfully loaded ${result.successCount} investors into your network.`,
         });
       } else {
         toast({
-          title: "Migration Completed with Errors",
-          description: `Migrated ${result.successCount} investors, ${result.failedCount} failed. Check console for details.`,
+          title: "Import Completed",
+          description: `Loaded ${result.successCount} investors, ${result.failedCount} had issues.`,
           variant: "destructive"
         });
-        console.error('Migration errors:', result.errors);
+        console.error('Import errors:', result.errors);
       }
       
+      setImportProgress(null);
       await loadInvestors();
     } catch (error) {
-      console.error('Error migrating data:', error);
+      console.error('Error during auto-import:', error);
+      setImportProgress(null);
       toast({
-        title: "Error",
-        description: "Failed to migrate investor data. Check console for details.",
+        title: "Import Error",
+        description: "Failed to load investor data. Please refresh the page.",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
+
 
   const handleInvestorClick = async (investor: any) => {
     setSelectedInvestor(investor);
@@ -130,10 +128,19 @@ const Dashboard = () => {
       : '-'
   };
 
-  if (loading) {
+  if (loading || importProgress) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <div className="text-center">
+          <p className="text-muted-foreground text-lg mb-2">
+            {importProgress || "Loading..."}
+          </p>
+          {importProgress && (
+            <p className="text-sm text-muted-foreground">
+              This may take a moment...
+            </p>
+          )}
+        </div>
       </div>
     );
   }
@@ -216,29 +223,8 @@ const Dashboard = () => {
           </Button>
         </div>
 
-        {/* Re-import Data Button */}
-        <div className="mb-4 flex justify-end">
-          <Button variant="outline" onClick={handleMigrateData}>
-            Re-import Full Investor Data
-          </Button>
-        </div>
-
         {/* Investor Grid */}
-        {investors.length === 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>No Investors Yet</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                Click the button below to migrate your investor data to the database.
-              </p>
-              <Button onClick={handleMigrateData}>
-                Migrate Investor Data
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
+        {investors.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredInvestors.map((investor) => (
               <InvestorCard
