@@ -211,49 +211,49 @@ const Dashboard = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          <Card className="bg-muted/30">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
               <CardTitle className="text-sm font-medium">Total Investors</CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+            <CardContent className="p-4 pt-0">
+              <div className="text-xl font-bold">{stats.total}</div>
               <p className="text-xs text-muted-foreground">
                 {stats.total === 0 ? 'No investors yet' : 'In your network'}
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="border-l-2 border-l-green-500 bg-muted/30">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
               <CardTitle className="text-sm font-medium">Active Investors</CardTitle>
               <Users className="h-4 w-4 text-green-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.active}</div>
+            <CardContent className="p-4 pt-0">
+              <div className="text-xl font-bold">{stats.active}</div>
               <p className="text-xs text-muted-foreground">Ready to receive leads</p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="border-l-2 border-l-blue-500 bg-muted/30">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
               <CardTitle className="text-sm font-medium">Test Investors</CardTitle>
               <FlaskConical className="h-4 w-4 text-blue-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.test}</div>
+            <CardContent className="p-4 pt-0">
+              <div className="text-xl font-bold">{stats.test}</div>
               <p className="text-xs text-muted-foreground">In testing phase</p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-amber-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="border-l-2 border-l-amber-500 bg-muted/30">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
               <CardTitle className="text-sm font-medium">Paused Investors</CardTitle>
               <PauseCircle className="h-4 w-4 text-amber-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.paused}</div>
+            <CardContent className="p-4 pt-0">
+              <div className="text-xl font-bold">{stats.paused}</div>
               <p className="text-xs text-muted-foreground">Temporarily on hold</p>
             </CardContent>
           </Card>
