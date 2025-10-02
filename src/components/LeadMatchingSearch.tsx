@@ -31,6 +31,9 @@ interface MatchedInvestor {
   matchScore: number;
   matchReasons: string[];
   isPrimaryMarket: boolean;
+  isSecondaryMarket: boolean;
+  isFullCoverage: boolean;
+  isDirectPurchase: boolean;
 }
 
 export function LeadMatchingSearch() {
@@ -68,24 +71,45 @@ export function LeadMatchingSearch() {
       investors?.forEach((investor) => {
         let matchScore = 0;
         const matchReasons: string[] = [];
+        let isFullCoverage = false;
+        let isDirectPurchase = false;
         let isPrimaryMarket = false;
+        let isSecondaryMarket = false;
 
         // Check market match
         const markets = investor.markets || [];
-        const hasMarketMatch = markets.some((market: any) => {
+        
+        markets.forEach((market: any) => {
           const stateMatch = market.states?.includes(leadData.state);
           const zipMatch = market.zip_codes?.includes(leadData.zipCode);
-          
-          if (market.market_type === 'primary' && (stateMatch || zipMatch)) {
-            isPrimaryMarket = true;
+
+          if (market.market_type === 'full_coverage' && stateMatch) {
+            isFullCoverage = true;
+            matchScore += 50;
+            matchReasons.push("Full coverage state match");
           }
-          
-          return stateMatch || zipMatch;
+
+          if (market.market_type === 'direct_purchase' && (stateMatch || zipMatch)) {
+            isDirectPurchase = true;
+            matchReasons.push(zipMatch ? "Direct purchase zip match" : "Direct purchase state match");
+          }
+
+          if (market.market_type === 'primary' && zipMatch) {
+            isPrimaryMarket = true;
+            matchScore += 40;
+            matchReasons.push("Primary market zip code match");
+          }
+
+          if (market.market_type === 'secondary' && zipMatch) {
+            isSecondaryMarket = true;
+            matchScore += 25;
+            matchReasons.push("Secondary market zip code match");
+          }
         });
 
-        if (hasMarketMatch) {
-          matchScore += 40;
-          matchReasons.push("Market coverage match");
+        // Only include if there's at least one market match
+        if (!isFullCoverage && !isPrimaryMarket && !isSecondaryMarket) {
+          return;
         }
 
         // Check buy box criteria
@@ -132,22 +156,22 @@ export function LeadMatchingSearch() {
           }
         }
 
-        // Only include investors with at least a market match
-        if (matchScore > 0) {
-          matches.push({
-            id: investor.id,
-            company_name: investor.company_name,
-            hubspot_url: investor.hubspot_url,
-            coverage_type: investor.coverage_type,
-            tags: investor.tags || [],
-            tier: investor.tier,
-            weekly_cap: investor.weekly_cap,
-            main_poc: investor.main_poc,
-            matchScore,
-            matchReasons,
-            isPrimaryMarket,
-          });
-        }
+        matches.push({
+          id: investor.id,
+          company_name: investor.company_name,
+          hubspot_url: investor.hubspot_url,
+          coverage_type: investor.coverage_type,
+          tags: investor.tags || [],
+          tier: investor.tier,
+          weekly_cap: investor.weekly_cap,
+          main_poc: investor.main_poc,
+          matchScore,
+          matchReasons,
+          isPrimaryMarket: isPrimaryMarket || isFullCoverage,
+          isSecondaryMarket,
+          isFullCoverage,
+          isDirectPurchase,
+        });
       });
 
       // Sort by match score
@@ -166,13 +190,8 @@ export function LeadMatchingSearch() {
     setHasSearched(false);
   };
 
-  const directPurchaseInvestors = matchedInvestors.filter(
-    inv => inv.coverage_type === 'national' || inv.coverage_type === 'multi_state'
-  );
-
-  const primaryMarketInvestors = matchedInvestors.filter(
-    inv => inv.isPrimaryMarket && (inv.coverage_type === 'local' || inv.coverage_type !== 'national')
-  );
+  const primaryMarketInvestors = matchedInvestors.filter(inv => inv.isPrimaryMarket);
+  const secondaryMarketInvestors = matchedInvestors.filter(inv => inv.isSecondaryMarket && !inv.isPrimaryMarket);
 
   return (
     <div className="space-y-6">
@@ -287,27 +306,6 @@ export function LeadMatchingSearch() {
       {/* Results */}
       {hasSearched && (
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Direct Purchase Investors */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <TrendingUp className="h-5 w-5 text-green-500" />
-                Direct Purchase Investors ({directPurchaseInvestors.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {directPurchaseInvestors.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No direct purchase investors match this lead
-                </p>
-              ) : (
-                directPurchaseInvestors.map((investor) => (
-                  <InvestorMatchCard key={investor.id} investor={investor} />
-                ))
-              )}
-            </CardContent>
-          </Card>
-
           {/* Primary Market Investors */}
           <Card>
             <CardHeader>
@@ -328,6 +326,27 @@ export function LeadMatchingSearch() {
               )}
             </CardContent>
           </Card>
+
+          {/* Secondary Market Investors */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <TrendingUp className="h-5 w-5 text-amber-500" />
+                Secondary Market Investors ({secondaryMarketInvestors.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {secondaryMarketInvestors.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No secondary market investors match this lead
+                </p>
+              ) : (
+                secondaryMarketInvestors.map((investor) => (
+                  <InvestorMatchCard key={investor.id} investor={investor} />
+                ))
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
@@ -339,7 +358,14 @@ function InvestorMatchCard({ investor }: { investor: MatchedInvestor }) {
     <div className="border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h4 className="font-semibold text-base mb-1">{investor.company_name}</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold text-base mb-1">{investor.company_name}</h4>
+            {investor.isDirectPurchase && (
+              <Badge variant="default" className="bg-green-600 text-xs">
+                Direct Purchase
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">{investor.main_poc}</p>
         </div>
         {investor.hubspot_url && (

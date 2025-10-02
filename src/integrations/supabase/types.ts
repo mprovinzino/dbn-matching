@@ -235,7 +235,7 @@ export type Database = {
     Enums: {
       coverage_type: "local" | "multi_state" | "state" | "national"
       investor_status: "active" | "paused" | "test" | "inactive"
-      market_type: "direct_purchase" | "primary" | "secondary"
+      market_type: "direct_purchase" | "primary" | "secondary" | "full_coverage"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -365,7 +365,7 @@ export const Constants = {
     Enums: {
       coverage_type: ["local", "multi_state", "state", "national"],
       investor_status: ["active", "paused", "test", "inactive"],
-      market_type: ["direct_purchase", "primary", "secondary"],
+      market_type: ["direct_purchase", "primary", "secondary", "full_coverage"],
     },
   },
 } as const

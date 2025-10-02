@@ -232,54 +232,71 @@ export function InvestorDetailModal({
               <CardHeader>
                 <CardTitle>Market Coverage</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Tabs defaultValue={markets[0]?.market_type || 'direct_purchase'}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    {markets.map((market) => (
-                      <TabsTrigger 
-                        key={market.id} 
-                        value={market.market_type}
-                        className="capitalize"
-                      >
-                        {market.market_type.replace(/_/g, ' ')}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                  {markets.map((market) => (
-                    <TabsContent key={market.id} value={market.market_type} className="space-y-4">
-                      {market.states && market.states.length > 0 && (
+              <CardContent className="space-y-6">
+                {/* Full Coverage States */}
+                {markets.find(m => m.market_type === 'full_coverage') && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-blue-600">Full Coverage States</h4>
+                    <div className="flex gap-1 flex-wrap">
+                      {markets.find(m => m.market_type === 'full_coverage')?.states?.map((state: string) => (
+                        <Badge key={state} variant="default">{state}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Direct Purchase Markets */}
+                {markets.find(m => m.market_type === 'direct_purchase') && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-green-600">Direct Purchase Markets</h4>
+                    <div className="space-y-2">
+                      {markets.find(m => m.market_type === 'direct_purchase')?.states?.length > 0 && (
                         <div>
-                          <p className="text-sm font-medium mb-2">States</p>
+                          <p className="text-xs text-muted-foreground mb-1">States</p>
                           <div className="flex gap-1 flex-wrap">
-                            {market.states.map((state: string) => (
+                            {markets.find(m => m.market_type === 'direct_purchase')?.states?.map((state: string) => (
                               <Badge key={state} variant="outline">{state}</Badge>
                             ))}
                           </div>
                         </div>
                       )}
-                      {market.dmas && market.dmas.length > 0 && (
+                      {markets.find(m => m.market_type === 'direct_purchase')?.zip_codes?.length > 0 && (
                         <div>
-                          <p className="text-sm font-medium mb-2">DMAs</p>
-                          <div className="flex gap-1 flex-wrap">
-                            {market.dmas.map((dma: string) => (
-                              <Badge key={dma} variant="outline">{dma}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {market.zip_codes && market.zip_codes.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium mb-2">Zip Codes</p>
-                          <div className="flex gap-1 flex-wrap max-h-40 overflow-y-auto">
-                            {market.zip_codes.map((zip: string) => (
+                          <p className="text-xs text-muted-foreground mb-1">Zip Codes</p>
+                          <div className="flex gap-1 flex-wrap max-h-20 overflow-y-auto">
+                            {markets.find(m => m.market_type === 'direct_purchase')?.zip_codes?.map((zip: string) => (
                               <Badge key={zip} variant="outline">{zip}</Badge>
                             ))}
                           </div>
                         </div>
                       )}
-                    </TabsContent>
-                  ))}
-                </Tabs>
+                    </div>
+                  </div>
+                )}
+
+                {/* Primary Markets */}
+                {markets.find(m => m.market_type === 'primary') && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-purple-600">Primary Market Zip Codes</h4>
+                    <div className="flex gap-1 flex-wrap max-h-40 overflow-y-auto">
+                      {markets.find(m => m.market_type === 'primary')?.zip_codes?.map((zip: string) => (
+                        <Badge key={zip} variant="secondary">{zip}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Secondary Markets */}
+                {markets.find(m => m.market_type === 'secondary') && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-amber-600">Secondary Market Zip Codes</h4>
+                    <div className="flex gap-1 flex-wrap max-h-40 overflow-y-auto">
+                      {markets.find(m => m.market_type === 'secondary')?.zip_codes?.map((zip: string) => (
+                        <Badge key={zip} variant="outline">{zip}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

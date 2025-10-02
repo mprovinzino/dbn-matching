@@ -46,14 +46,16 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
     timeframe: [] as string[],
     lead_types: [] as string[],
     buy_box_notes: "",
-    primary_states: [] as string[],
+    full_coverage_states: "",
+    direct_purchase_markets: "",
     primary_zip_codes: "",
-    secondary_states: [] as string[],
     secondary_zip_codes: "",
   });
 
   useEffect(() => {
     if (investor && open) {
+      const fullCoverageMarket = markets?.find(m => m.market_type === 'full_coverage');
+      const directPurchaseMarket = markets?.find(m => m.market_type === 'direct_purchase');
       const primaryMarket = markets?.find(m => m.market_type === 'primary');
       const secondaryMarket = markets?.find(m => m.market_type === 'secondary');
 
@@ -79,9 +81,12 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
         timeframe: buyBox?.timeframe || [],
         lead_types: buyBox?.lead_types || [],
         buy_box_notes: buyBox?.notes || "",
-        primary_states: primaryMarket?.states || [],
+        full_coverage_states: fullCoverageMarket?.states?.join(', ') || "",
+        direct_purchase_markets: [
+          ...(directPurchaseMarket?.states || []),
+          ...(directPurchaseMarket?.zip_codes || [])
+        ].join(', ') || "",
         primary_zip_codes: primaryMarket?.zip_codes?.join(', ') || "",
-        secondary_states: secondaryMarket?.states || [],
         secondary_zip_codes: secondaryMarket?.zip_codes?.join(', ') || "",
       });
     }
@@ -143,36 +148,67 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
         }).eq('investor_id', investor.id);
       }
 
-      // Update markets
-      const primaryMarket = markets?.find(m => m.market_type === 'primary');
-      const secondaryMarket = markets?.find(m => m.market_type === 'secondary');
+      // Update markets - delete all existing and recreate
+      await supabase.from('markets').delete().eq('investor_id', investor.id);
 
-      if (primaryMarket) {
-        await supabase.from('markets').update({
-          states: formData.primary_states,
-          zip_codes: formData.primary_zip_codes.split(',').map(z => z.trim()).filter(Boolean),
-        }).eq('id', primaryMarket.id);
-      } else if (formData.primary_states.length > 0 || formData.primary_zip_codes) {
-        await supabase.from('markets').insert({
-          investor_id: investor.id,
-          market_type: 'primary',
-          states: formData.primary_states,
-          zip_codes: formData.primary_zip_codes.split(',').map(z => z.trim()).filter(Boolean),
-        });
+      const marketInserts = [];
+
+      // Full coverage states
+      if (formData.full_coverage_states) {
+        const states = formData.full_coverage_states.split(',').map(s => s.trim()).filter(Boolean);
+        if (states.length > 0) {
+          marketInserts.push({
+            investor_id: investor.id,
+            market_type: 'full_coverage',
+            states,
+            zip_codes: [],
+          });
+        }
       }
 
-      if (secondaryMarket) {
-        await supabase.from('markets').update({
-          states: formData.secondary_states,
-          zip_codes: formData.secondary_zip_codes.split(',').map(z => z.trim()).filter(Boolean),
-        }).eq('id', secondaryMarket.id);
-      } else if (formData.secondary_states.length > 0 || formData.secondary_zip_codes) {
-        await supabase.from('markets').insert({
-          investor_id: investor.id,
-          market_type: 'secondary',
-          states: formData.secondary_states,
-          zip_codes: formData.secondary_zip_codes.split(',').map(z => z.trim()).filter(Boolean),
-        });
+      // Direct purchase markets
+      if (formData.direct_purchase_markets) {
+        const items = formData.direct_purchase_markets.split(',').map(s => s.trim()).filter(Boolean);
+        const states = items.filter(item => item.length === 2 && /^[A-Z]{2}$/.test(item));
+        const zips = items.filter(item => /^\d{5}$/.test(item));
+        if (states.length > 0 || zips.length > 0) {
+          marketInserts.push({
+            investor_id: investor.id,
+            market_type: 'direct_purchase',
+            states,
+            zip_codes: zips,
+          });
+        }
+      }
+
+      // Primary markets
+      if (formData.primary_zip_codes) {
+        const zips = formData.primary_zip_codes.split(',').map(z => z.trim()).filter(Boolean);
+        if (zips.length > 0) {
+          marketInserts.push({
+            investor_id: investor.id,
+            market_type: 'primary',
+            states: [],
+            zip_codes: zips,
+          });
+        }
+      }
+
+      // Secondary markets
+      if (formData.secondary_zip_codes) {
+        const zips = formData.secondary_zip_codes.split(',').map(z => z.trim()).filter(Boolean);
+        if (zips.length > 0) {
+          marketInserts.push({
+            investor_id: investor.id,
+            market_type: 'secondary',
+            states: [],
+            zip_codes: zips,
+          });
+        }
+      }
+
+      if (marketInserts.length > 0) {
+        await supabase.from('markets').insert(marketInserts);
       }
 
       toast({
@@ -425,43 +461,51 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
   const renderStep3 = () => (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="primary_states">Primary Markets - States (comma-separated)</Label>
+        <Label htmlFor="full_coverage_states">Full Coverage States (comma-separated)</Label>
         <Input
-          id="primary_states"
-          placeholder="e.g., TX, FL, CA"
-          value={formData.primary_states.join(', ')}
-          onChange={(e) => updateField('primary_states', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+          id="full_coverage_states"
+          placeholder="FL, GA, TX"
+          value={formData.full_coverage_states}
+          onChange={(e) => updateField('full_coverage_states', e.target.value)}
         />
+        <p className="text-sm text-muted-foreground mt-1">States where investor accepts leads from any zip code</p>
       </div>
+      
       <div>
-        <Label htmlFor="primary_zips">Primary Markets - Zip Codes (comma-separated)</Label>
+        <Label htmlFor="direct_purchase_markets">Direct Purchase Markets (comma-separated states/zips)</Label>
+        <Input
+          id="direct_purchase_markets"
+          placeholder="FL, 33914, 33901"
+          value={formData.direct_purchase_markets}
+          onChange={(e) => updateField('direct_purchase_markets', e.target.value)}
+        />
+        <p className="text-sm text-muted-foreground mt-1">Markets where investor buys properties directly (not wholesale/novation)</p>
+      </div>
+
+      <div>
+        <Label htmlFor="primary_zips">Primary Market Zip Codes (comma-separated)</Label>
         <Textarea
           id="primary_zips"
-          placeholder="e.g., 78701, 78702, 78703"
+          placeholder="33914, 33901, 33908"
           value={formData.primary_zip_codes}
           onChange={(e) => updateField('primary_zip_codes', e.target.value)}
           rows={3}
         />
+        <p className="text-sm text-muted-foreground mt-1">Specific zip codes they actively cover as primary markets</p>
       </div>
+      
       <div>
-        <Label htmlFor="secondary_states">Secondary Markets - States</Label>
-        <Input
-          id="secondary_states"
-          placeholder="e.g., NY, NJ, PA"
-          value={formData.secondary_states.join(', ')}
-          onChange={(e) => updateField('secondary_states', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-        />
-      </div>
-      <div>
-        <Label htmlFor="secondary_zips">Secondary Markets - Zip Codes</Label>
+        <Label htmlFor="secondary_zips">Secondary Market Zip Codes (comma-separated)</Label>
         <Textarea
           id="secondary_zips"
-          placeholder="e.g., 10001, 10002"
+          placeholder="28001, 28002"
           value={formData.secondary_zip_codes}
           onChange={(e) => updateField('secondary_zip_codes', e.target.value)}
           rows={3}
         />
+        <p className="text-sm text-muted-foreground mt-1">Zip codes they cover as secondary priority markets</p>
       </div>
+
       <div>
         <Label htmlFor="buy_box_notes">Additional Notes</Label>
         <Textarea
