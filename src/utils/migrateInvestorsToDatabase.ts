@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { readInvestorExcel, ParsedInvestorData } from './parseFullInvestorData';
+import investorsXlsxUrl from '@/data/full_investors.xlsx?url';
 
 export interface MigrationResult {
   success: boolean;
@@ -19,9 +20,9 @@ export async function migrateInvestorsToDatabase(userId: string): Promise<Migrat
   };
 
   try {
-    // Step 1: Read Excel file
-    console.log('Reading Excel file...');
-    const investors = await readInvestorExcel('/src/data/current_investors.xlsx');
+    // Step 1: Read Excel file using Vite asset URL
+    console.log('Reading Excel file from:', investorsXlsxUrl);
+    const investors = await readInvestorExcel(investorsXlsxUrl);
     result.totalProcessed = investors.length;
     console.log(`Found ${investors.length} investors in Excel file`);
 

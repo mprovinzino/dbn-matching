@@ -21,12 +21,49 @@ const Dashboard = () => {
   const [selectedBuyBox, setSelectedBuyBox] = useState<any>(null);
   const [selectedMarkets, setSelectedMarkets] = useState<any[]>([]);
   const [importProgress, setImportProgress] = useState<string | null>(null);
-  const [hasCheckedForImport, setHasCheckedForImport] = useState(false);
+  const [hasCheckedForSeed, setHasCheckedForSeed] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     loadInvestors();
   }, []);
+
+  // Check seed status and auto-import on first load
+  useEffect(() => {
+    const checkSeedStatus = async () => {
+      if (hasCheckedForSeed || loading) return;
+
+      setHasCheckedForSeed(true);
+
+      try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Check if user has been seeded
+        const { data: seedStatus, error: seedError } = await supabase
+          .from('user_seed_status')
+          .select('seeded')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (seedError) {
+          console.error('Error checking seed status:', seedError);
+          return;
+        }
+
+        // If not seeded yet, trigger import
+        if (!seedStatus || !seedStatus.seeded) {
+          console.log('User not seeded, starting auto-import...');
+          await handleAutoImport();
+        }
+      } catch (error) {
+        console.error('Error in seed check:', error);
+      }
+    };
+
+    checkSeedStatus();
+  }, [loading, hasCheckedForSeed]);
 
   const loadInvestors = async () => {
     try {
@@ -38,12 +75,6 @@ const Dashboard = () => {
 
       if (error) throw error;
       setInvestors(data || []);
-      
-      // Auto-import if no investors and haven't checked yet
-      if ((data || []).length === 0 && !hasCheckedForImport) {
-        setHasCheckedForImport(true);
-        await handleAutoImport();
-      }
     } catch (error) {
       console.error('Error loading investors:', error);
     } finally {
@@ -60,27 +91,41 @@ const Dashboard = () => {
         return;
       }
       
-      setImportProgress("Importing your investor network...");
+      setImportProgress("Clearing existing data and importing full investor network...");
+      console.log('Starting migration for user:', user.id);
       
       const { migrateInvestorsToDatabase } = await import('@/utils/migrateInvestorsToDatabase');
       const result = await migrateInvestorsToDatabase(user.id);
       
       if (result.success) {
+        // Mark user as seeded
+        const { error: seedError } = await supabase
+          .from('user_seed_status')
+          .upsert({
+            user_id: user.id,
+            seeded: true,
+            seeded_at: new Date().toISOString(),
+          });
+
+        if (seedError) {
+          console.error('Error updating seed status:', seedError);
+        }
+
         toast({
-          title: "Welcome! 🎉",
-          description: `Successfully loaded ${result.successCount} investors into your network.`,
+          title: "Import Successful",
+          description: `Successfully imported ${result.successCount} investors from your network`,
         });
+        await loadInvestors();
       } else {
         toast({
-          title: "Import Completed",
-          description: `Loaded ${result.successCount} investors, ${result.failedCount} had issues.`,
-          variant: "destructive"
+          title: "Import Completed with Errors",
+          description: `Imported ${result.successCount} investors, ${result.failedCount} failed`,
+          variant: "destructive",
         });
         console.error('Import errors:', result.errors);
       }
       
       setImportProgress(null);
-      await loadInvestors();
     } catch (error) {
       console.error('Error during auto-import:', error);
       setImportProgress(null);

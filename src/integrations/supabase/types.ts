@@ -165,6 +165,27 @@ export type Database = {
           },
         ]
       }
+      user_seed_status: {
+        Row: {
+          created_at: string
+          seeded: boolean
+          seeded_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          seeded?: boolean
+          seeded_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          seeded?: boolean
+          seeded_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       zip_code_reference: {
         Row: {
           city: string

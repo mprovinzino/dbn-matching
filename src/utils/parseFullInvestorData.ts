@@ -193,9 +193,13 @@ export function parseExcelInvestorData(row: ExcelInvestorRow): ParsedInvestorDat
   };
 }
 
-export async function readInvestorExcel(filePath: string): Promise<ParsedInvestorData[]> {
+export async function readInvestorExcel(fileUrl: string): Promise<ParsedInvestorData[]> {
   try {
-    const response = await fetch(filePath);
+    console.log('Fetching Excel file from:', fileUrl);
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Excel file: ${response.status} ${response.statusText}`);
+    }
     const arrayBuffer = await response.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
     
@@ -204,6 +208,7 @@ export async function readInvestorExcel(filePath: string): Promise<ParsedInvesto
     
     const jsonData = XLSX.utils.sheet_to_json<ExcelInvestorRow>(worksheet);
     
+    console.log(`Successfully parsed ${jsonData.length} rows from Excel file`);
     return jsonData.map(row => parseExcelInvestorData(row));
   } catch (error) {
     console.error('Error reading Excel file:', error);
