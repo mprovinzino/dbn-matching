@@ -34,7 +34,8 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
     cold_accepts: false,
     offer_types: [] as string[],
     tags: [] as string[],
-    freeze_reason: "",
+    status: 'active' as 'active' | 'paused' | 'test' | 'inactive',
+    status_reason: "",
     property_types: [] as string[],
     on_market_status: [] as string[],
     year_built_min: undefined as number | undefined,
@@ -66,7 +67,8 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
         cold_accepts: investor.cold_accepts || false,
         offer_types: investor.offer_types || [],
         tags: investor.tags || [],
-        freeze_reason: investor.freeze_reason || "",
+        status: investor.status || 'active',
+        status_reason: investor.status_reason || "",
         property_types: buyBox?.property_types || [],
         on_market_status: buyBox?.on_market_status || [],
         year_built_min: buyBox?.year_built_min,
@@ -117,7 +119,9 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
           cold_accepts: formData.cold_accepts,
           offer_types: formData.offer_types,
           tags: formData.tags,
-          freeze_reason: formData.freeze_reason || null,
+          status: formData.status,
+          status_reason: formData.status_reason || null,
+          status_changed_at: new Date().toISOString(),
         })
         .eq('id', investor.id);
 
@@ -190,73 +194,160 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
     }
   };
 
-  const renderStep1 = () => (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="company_name">Company Name *</Label>
-        <Input
-          id="company_name"
-          value={formData.company_name}
-          onChange={(e) => updateField('company_name', e.target.value)}
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="main_poc">Main POC *</Label>
-        <Input
-          id="main_poc"
-          value={formData.main_poc}
-          onChange={(e) => updateField('main_poc', e.target.value)}
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="hubspot_url">HubSpot URL</Label>
-        <Input
-          id="hubspot_url"
-          type="url"
-          value={formData.hubspot_url}
-          onChange={(e) => updateField('hubspot_url', e.target.value)}
-        />
-      </div>
-      <div>
-        <Label htmlFor="coverage_type">Coverage Type *</Label>
-        <Select value={formData.coverage_type} onValueChange={(v) => updateField('coverage_type', v)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="local">Local</SelectItem>
-            <SelectItem value="state">State</SelectItem>
-            <SelectItem value="multi_state">Multi-State</SelectItem>
-            <SelectItem value="national">National</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
+  const renderStep1 = () => {
+    const statusReasons = [
+      'Portal Updates',
+      'Waiting on Referral Agreement',
+      'Poor Performance',
+      'Requested to be Removed',
+      'Out of Town',
+      'Change of company owner',
+      'Need to Get a Response/call',
+      'Custom'
+    ];
+
+    const businessTags = [
+      'Direct Purchase',
+      'Wholesale',
+      'Local',
+      'Direct to Consumer',
+      'Seller Finance Buyer',
+      'Novations',
+      'Sub-2s',
+    ];
+
+    return (
+      <div className="space-y-4">
         <div>
-          <Label htmlFor="tier">Tier (1-10) *</Label>
+          <Label htmlFor="company_name">Company Name *</Label>
           <Input
-            id="tier"
-            type="number"
-            min={1}
-            max={10}
-            value={formData.tier}
-            onChange={(e) => updateField('tier', parseInt(e.target.value))}
+            id="company_name"
+            value={formData.company_name}
+            onChange={(e) => updateField('company_name', e.target.value)}
+            required
           />
         </div>
         <div>
-          <Label htmlFor="weekly_cap">Weekly Cap</Label>
+          <Label htmlFor="main_poc">Main POC *</Label>
           <Input
-            id="weekly_cap"
-            type="number"
-            value={formData.weekly_cap}
-            onChange={(e) => updateField('weekly_cap', parseInt(e.target.value))}
+            id="main_poc"
+            value={formData.main_poc}
+            onChange={(e) => updateField('main_poc', e.target.value)}
+            required
           />
         </div>
+        <div>
+          <Label htmlFor="hubspot_url">HubSpot URL</Label>
+          <Input
+            id="hubspot_url"
+            type="url"
+            value={formData.hubspot_url}
+            onChange={(e) => updateField('hubspot_url', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="coverage_type">Coverage Type *</Label>
+          <Select value={formData.coverage_type} onValueChange={(v) => updateField('coverage_type', v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="local">Local</SelectItem>
+              <SelectItem value="state">State</SelectItem>
+              <SelectItem value="multi_state">Multi-State</SelectItem>
+              <SelectItem value="national">National</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="tier">Tier (1-10) *</Label>
+            <Input
+              id="tier"
+              type="number"
+              min={1}
+              max={10}
+              value={formData.tier}
+              onChange={(e) => updateField('tier', parseInt(e.target.value))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="weekly_cap">Weekly Cap</Label>
+            <Input
+              id="weekly_cap"
+              type="number"
+              value={formData.weekly_cap}
+              onChange={(e) => updateField('weekly_cap', parseInt(e.target.value))}
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="status">Investor Status *</Label>
+          <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="paused">Paused</SelectItem>
+              <SelectItem value="test">Test</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {(formData.status === 'paused' || formData.status === 'inactive') && (
+          <div>
+            <Label htmlFor="status_reason">Status Reason</Label>
+            <Select 
+              value={statusReasons.includes(formData.status_reason) ? formData.status_reason : 'Custom'}
+              onValueChange={(v) => {
+                if (v !== 'Custom') {
+                  updateField('status_reason', v);
+                } else {
+                  updateField('status_reason', '');
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusReasons.map((reason) => (
+                  <SelectItem key={reason} value={reason}>{reason}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(!statusReasons.includes(formData.status_reason) || formData.status_reason === 'Custom') && (
+              <Input
+                placeholder="Enter custom reason"
+                className="mt-2"
+                value={formData.status_reason === 'Custom' ? '' : formData.status_reason}
+                onChange={(e) => updateField('status_reason', e.target.value)}
+              />
+            )}
+          </div>
+        )}
+
+        <div>
+          <Label>Business Tags</Label>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {businessTags.map((tag) => (
+              <div key={tag} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`tag-${tag}`}
+                  checked={formData.tags.includes(tag)}
+                  onCheckedChange={() => toggleArrayField('tags', tag)}
+                />
+                <label htmlFor={`tag-${tag}`} className="text-sm">{tag}</label>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderStep2 = () => (
     <div className="space-y-4">

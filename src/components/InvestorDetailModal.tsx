@@ -31,6 +31,20 @@ export function InvestorDetailModal({
     return "tier-7-10";
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-500';
+      case 'paused': return 'bg-yellow-500';
+      case 'inactive': return 'bg-red-500';
+      case 'test': return 'bg-blue-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const formatStatusLabel = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -44,6 +58,11 @@ export function InvestorDetailModal({
               <p className="text-muted-foreground mt-1">{investor.main_poc}</p>
             </div>
             <div className="flex items-center gap-2">
+              {investor.status && (
+                <Badge className={getStatusColor(investor.status)}>
+                  {formatStatusLabel(investor.status)}
+                </Badge>
+              )}
               <Badge className={`bg-${getTierColor(investor.tier)}`}>
                 Tier {investor.tier}
               </Badge>
@@ -55,11 +74,17 @@ export function InvestorDetailModal({
           </div>
         </DialogHeader>
 
-        {investor.freeze_reason && (
-          <Alert variant="destructive">
+        {investor.status !== 'active' && investor.status_reason && (
+          <Alert variant={investor.status === 'inactive' ? 'destructive' : 'default'}>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Paused:</strong> {investor.freeze_reason}
+              <strong>Status: {formatStatusLabel(investor.status)}</strong>
+              <div>{investor.status_reason}</div>
+              {investor.status_changed_at && (
+                <div className="text-xs mt-1 opacity-70">
+                  Last updated: {new Date(investor.status_changed_at).toLocaleDateString()}
+                </div>
+              )}
             </AlertDescription>
           </Alert>
         )}

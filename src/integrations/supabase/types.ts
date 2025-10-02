@@ -79,11 +79,14 @@ export type Database = {
           company_name: string
           coverage_type: Database["public"]["Enums"]["coverage_type"]
           created_at: string
-          freeze_reason: string | null
           hubspot_url: string | null
           id: string
           main_poc: string
           offer_types: string[] | null
+          status: Database["public"]["Enums"]["investor_status"]
+          status_changed_at: string | null
+          status_changed_by: string | null
+          status_reason: string | null
           tags: string[] | null
           tier: number
           updated_at: string
@@ -95,11 +98,14 @@ export type Database = {
           company_name: string
           coverage_type: Database["public"]["Enums"]["coverage_type"]
           created_at?: string
-          freeze_reason?: string | null
           hubspot_url?: string | null
           id?: string
           main_poc: string
           offer_types?: string[] | null
+          status?: Database["public"]["Enums"]["investor_status"]
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          status_reason?: string | null
           tags?: string[] | null
           tier: number
           updated_at?: string
@@ -111,11 +117,14 @@ export type Database = {
           company_name?: string
           coverage_type?: Database["public"]["Enums"]["coverage_type"]
           created_at?: string
-          freeze_reason?: string | null
           hubspot_url?: string | null
           id?: string
           main_poc?: string
           offer_types?: string[] | null
+          status?: Database["public"]["Enums"]["investor_status"]
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          status_reason?: string | null
           tags?: string[] | null
           tier?: number
           updated_at?: string
@@ -225,6 +234,7 @@ export type Database = {
     }
     Enums: {
       coverage_type: "local" | "multi_state" | "state" | "national"
+      investor_status: "active" | "paused" | "test" | "inactive"
       market_type: "direct_purchase" | "primary" | "secondary"
     }
     CompositeTypes: {
@@ -354,6 +364,7 @@ export const Constants = {
   public: {
     Enums: {
       coverage_type: ["local", "multi_state", "state", "national"],
+      investor_status: ["active", "paused", "test", "inactive"],
       market_type: ["direct_purchase", "primary", "secondary"],
     },
   },

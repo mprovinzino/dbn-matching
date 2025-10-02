@@ -32,7 +32,8 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
     cold_accepts: false,
     offer_types: [] as string[],
     tags: [] as string[],
-    freeze_reason: "",
+    status: 'active' as 'active' | 'paused' | 'test' | 'inactive',
+    status_reason: "",
     // Buy Box
     property_types: [] as string[],
     on_market_status: [] as string[],
@@ -97,7 +98,8 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
           cold_accepts: formData.cold_accepts,
           offer_types: formData.offer_types,
           tags: formData.tags,
-          freeze_reason: formData.freeze_reason || null,
+          status: formData.status,
+          status_reason: formData.status_reason || null,
         }])
         .select()
         .single();

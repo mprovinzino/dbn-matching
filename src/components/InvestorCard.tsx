@@ -14,7 +14,8 @@ interface InvestorCardProps {
     weekly_cap: number;
     cold_accepts: boolean | null;
     tags: string[] | null;
-    freeze_reason: string | null;
+    status: 'active' | 'paused' | 'test' | 'inactive';
+    status_reason: string | null;
   };
   onClick: () => void;
 }
@@ -26,24 +27,29 @@ export function InvestorCard({ investor, onClick }: InvestorCardProps) {
     return "bg-[hsl(var(--tier-7-10))] hover:bg-[hsl(var(--tier-7-10))]/90";
   };
 
-  const getStatusBadge = () => {
-    const tags = investor.tags || [];
-    if (tags.includes("PAUSED") || investor.freeze_reason) {
-      return <Badge variant="destructive">PAUSED</Badge>;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-500 hover:bg-green-500/90';
+      case 'paused': return 'bg-yellow-500 hover:bg-yellow-500/90';
+      case 'inactive': return 'bg-red-500 hover:bg-red-500/90';
+      case 'test': return 'bg-blue-500 hover:bg-blue-500/90';
+      default: return 'bg-gray-500 hover:bg-gray-500/90';
     }
-    if (tags.includes("TEST")) {
-      return <Badge variant="secondary">TEST</Badge>;
-    }
-    if (tags.includes("Active")) {
-      return <Badge className="bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/90 text-white">Active</Badge>;
-    }
-    return null;
+  };
+
+  const formatStatusLabel = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   return (
     <Card 
-      className="cursor-pointer hover:shadow-lg transition-shadow"
+      className={`cursor-pointer hover:shadow-lg transition-shadow ${
+        investor.status === 'paused' ? 'border-yellow-500 border-2' : ''
+      } ${
+        investor.status === 'inactive' ? 'border-red-500 border-2 opacity-75' : ''
+      }`}
       onClick={onClick}
+      title={investor.status_reason || undefined}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -52,6 +58,11 @@ export function InvestorCard({ investor, onClick }: InvestorCardProps) {
             <div>
               <h3 className="font-semibold text-lg">{investor.company_name}</h3>
               <p className="text-sm text-muted-foreground">{investor.main_poc}</p>
+              {investor.status !== 'active' && investor.status_reason && (
+                <p className="text-xs text-muted-foreground mt-1 italic">
+                  {investor.status_reason}
+                </p>
+              )}
             </div>
           </div>
           <Badge className={getTierColor(investor.tier)}>
@@ -59,7 +70,11 @@ export function InvestorCard({ investor, onClick }: InvestorCardProps) {
           </Badge>
         </div>
         <div className="flex gap-2 mt-2">
-          {getStatusBadge()}
+          {investor.status && (
+            <Badge className={getStatusColor(investor.status)}>
+              {formatStatusLabel(investor.status)}
+            </Badge>
+          )}
           {investor.cold_accepts && (
             <Badge variant="outline">Accepts Cold</Badge>
           )}
