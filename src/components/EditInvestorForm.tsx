@@ -155,7 +155,13 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
 
       // Full coverage states
       if (formData.full_coverage_states) {
-        const states = formData.full_coverage_states.split(',').map(s => s.trim()).filter(Boolean);
+        // Split by comma or space, trim, and filter out empty strings
+        const states = formData.full_coverage_states
+          .split(/[,\s]+/)
+          .map(s => s.trim())
+          .filter(Boolean)
+          .filter(s => /^[A-Z]{2}$/.test(s)); // Ensure it's a valid 2-letter state code
+        
         if (states.length > 0) {
           marketInserts.push({
             investor_id: investor.id,
@@ -168,9 +174,15 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
 
       // Direct purchase markets
       if (formData.direct_purchase_markets) {
-        const items = formData.direct_purchase_markets.split(',').map(s => s.trim()).filter(Boolean);
+        // Split by comma or space, trim, and filter out empty strings
+        const items = formData.direct_purchase_markets
+          .split(/[,\s]+/)
+          .map(s => s.trim())
+          .filter(Boolean);
+        
         const states = items.filter(item => item.length === 2 && /^[A-Z]{2}$/.test(item));
         const zips = items.filter(item => /^\d{5}$/.test(item));
+        
         if (states.length > 0 || zips.length > 0) {
           marketInserts.push({
             investor_id: investor.id,
@@ -183,7 +195,13 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
 
       // Primary markets
       if (formData.primary_zip_codes) {
-        const zips = formData.primary_zip_codes.split(',').map(z => z.trim()).filter(Boolean);
+        // Split by comma, space, or newline, trim, and filter out empty strings
+        const zips = formData.primary_zip_codes
+          .split(/[,\s\n]+/)
+          .map(z => z.trim())
+          .filter(Boolean)
+          .filter(z => /^\d{5}$/.test(z)); // Ensure it's a valid 5-digit zip code
+        
         if (zips.length > 0) {
           marketInserts.push({
             investor_id: investor.id,
@@ -196,7 +214,13 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
 
       // Secondary markets
       if (formData.secondary_zip_codes) {
-        const zips = formData.secondary_zip_codes.split(',').map(z => z.trim()).filter(Boolean);
+        // Split by comma, space, or newline, trim, and filter out empty strings
+        const zips = formData.secondary_zip_codes
+          .split(/[,\s\n]+/)
+          .map(z => z.trim())
+          .filter(Boolean)
+          .filter(z => /^\d{5}$/.test(z)); // Ensure it's a valid 5-digit zip code
+        
         if (zips.length > 0) {
           marketInserts.push({
             investor_id: investor.id,

@@ -85,8 +85,13 @@ export function LeadMatchingSearch() {
         const markets = investor.markets || [];
         
         markets.forEach((market: any) => {
-          const stateMatch = market.states?.includes(leadData.state);
-          const zipMatch = market.zip_codes?.includes(leadData.zipCode);
+      // Handle both proper arrays and space-separated string arrays
+      const stateMatch = market.states?.some((s: string) => 
+        s === leadData.state || s.includes(leadData.state)
+      );
+      const zipMatch = market.zip_codes?.some((z: string) => 
+        z === leadData.zipCode || z.includes(leadData.zipCode)
+      );
 
           if (market.market_type === 'full_coverage' && stateMatch) {
             isFullCoverage = true;
