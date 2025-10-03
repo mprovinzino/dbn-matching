@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Plus, Filter, FlaskConical, PauseCircle } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Users, Plus, Filter, FlaskConical, PauseCircle, LayoutGrid, List, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InvestorCard } from "@/components/InvestorCard";
 import { InvestorDetailModal } from "@/components/InvestorDetailModal";
@@ -24,6 +26,7 @@ const Dashboard = () => {
   const [importProgress, setImportProgress] = useState<string | null>(null);
   const [hasCheckedForSeed, setHasCheckedForSeed] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -299,6 +302,22 @@ const Dashboard = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === "tiles" ? "default" : "outline"}
+              size="icon"
+              onClick={() => setViewMode("tiles")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              size="icon"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
           <Button onClick={() => setAddModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Investor
@@ -309,8 +328,8 @@ const Dashboard = () => {
           </Button>
         </div>
 
-        {/* Investor Grid */}
-        {investors.length > 0 && (
+        {/* Investor Grid/List */}
+        {investors.length > 0 && viewMode === "tiles" && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredInvestors.map((investor) => (
               <InvestorCard
@@ -320,6 +339,66 @@ const Dashboard = () => {
               />
             ))}
           </div>
+        )}
+
+        {investors.length > 0 && viewMode === "list" && (
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Company Name</TableHead>
+                  <TableHead>Main POC</TableHead>
+                  <TableHead>Tier</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Coverage</TableHead>
+                  <TableHead>Weekly Cap</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredInvestors.map((investor) => (
+                  <TableRow 
+                    key={investor.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleInvestorClick(investor)}
+                  >
+                    <TableCell className="font-medium">{investor.company_name}</TableCell>
+                    <TableCell>{investor.main_poc}</TableCell>
+                    <TableCell>
+                      <Badge variant={investor.tier === 1 ? "default" : investor.tier === 2 ? "secondary" : "outline"}>
+                        Tier {investor.tier}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={
+                          investor.status === 'active' ? 'default' : 
+                          investor.status === 'test' ? 'secondary' : 
+                          'outline'
+                        }
+                      >
+                        {investor.status.charAt(0).toUpperCase() + investor.status.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="capitalize">{investor.coverage_type.replace('_', ' ')}</TableCell>
+                    <TableCell>{investor.weekly_cap} leads/week</TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleInvestorClick(investor);
+                        }}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         )}
 
         {filteredInvestors.length === 0 && investors.length > 0 && (
