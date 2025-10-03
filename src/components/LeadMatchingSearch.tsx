@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, X, ExternalLink, TrendingUp, MapPin } from "lucide-react";
+import { Search, X, ExternalLink, TrendingUp, MapPin, LayoutGrid, List } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { InvestorDetailModal } from "@/components/InvestorDetailModal";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface LeadData {
   state: string;
@@ -44,6 +46,9 @@ export function LeadMatchingSearch() {
   const [searching, setSearching] = useState(false);
   const [matchedInvestors, setMatchedInvestors] = useState<MatchedInvestor[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedInvestorFullData, setSelectedInvestorFullData] = useState<any>(null);
 
   const handleSearch = async () => {
     if (!leadData.state || !leadData.zipCode) {
@@ -190,6 +195,27 @@ export function LeadMatchingSearch() {
     setHasSearched(false);
   };
 
+  const handleInvestorClick = async (investorId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('investors')
+        .select(`
+          *,
+          buy_box (*),
+          markets (*)
+        `)
+        .eq('id', investorId)
+        .single();
+
+      if (error) throw error;
+      
+      setSelectedInvestorFullData(data);
+      setModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching investor details:', error);
+    }
+  };
+
   const primaryMarketInvestors = matchedInvestors.filter(inv => inv.isPrimaryMarket);
   const secondaryMarketInvestors = matchedInvestors.filter(inv => inv.isSecondaryMarket && !inv.isPrimaryMarket);
 
@@ -305,57 +331,189 @@ export function LeadMatchingSearch() {
 
       {/* Results */}
       {hasSearched && (
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Primary Market Investors */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <MapPin className="h-5 w-5 text-blue-500" />
-                Primary Market Investors ({primaryMarketInvestors.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {primaryMarketInvestors.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No primary market investors match this lead
-                </p>
-              ) : (
-                primaryMarketInvestors.map((investor) => (
-                  <InvestorMatchCard key={investor.id} investor={investor} />
-                ))
-              )}
-            </CardContent>
-          </Card>
+        <>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">
+              Search Results ({matchedInvestors.length} investors found)
+            </h3>
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "tiles" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("tiles")}
+              >
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Tiles
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4 mr-2" />
+                List
+              </Button>
+            </div>
+          </div>
 
-          {/* Secondary Market Investors */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <TrendingUp className="h-5 w-5 text-amber-500" />
-                Secondary Market Investors ({secondaryMarketInvestors.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {secondaryMarketInvestors.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No secondary market investors match this lead
-                </p>
-              ) : (
-                secondaryMarketInvestors.map((investor) => (
-                  <InvestorMatchCard key={investor.id} investor={investor} />
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
+          {viewMode === "tiles" ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Primary Market Investors */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <MapPin className="h-5 w-5 text-blue-500" />
+                    Primary Market Investors ({primaryMarketInvestors.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {primaryMarketInvestors.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No primary market investors match this lead
+                    </p>
+                  ) : (
+                    primaryMarketInvestors.map((investor) => (
+                      <InvestorMatchCard 
+                        key={investor.id} 
+                        investor={investor}
+                        onClick={() => handleInvestorClick(investor.id)}
+                      />
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Secondary Market Investors */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <TrendingUp className="h-5 w-5 text-amber-500" />
+                    Secondary Market Investors ({secondaryMarketInvestors.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {secondaryMarketInvestors.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No secondary market investors match this lead
+                    </p>
+                  ) : (
+                    secondaryMarketInvestors.map((investor) => (
+                      <InvestorMatchCard 
+                        key={investor.id} 
+                        investor={investor}
+                        onClick={() => handleInvestorClick(investor.id)}
+                      />
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Company</TableHead>
+                      <TableHead>POC</TableHead>
+                      <TableHead>Market Type</TableHead>
+                      <TableHead>Tier</TableHead>
+                      <TableHead>Weekly Cap</TableHead>
+                      <TableHead>Match Score</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {matchedInvestors.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          No investors match this lead
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      matchedInvestors.map((investor) => (
+                        <TableRow 
+                          key={investor.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleInvestorClick(investor.id)}
+                        >
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {investor.company_name}
+                              {investor.isDirectPurchase && (
+                                <Badge variant="default" className="bg-green-600 text-xs">
+                                  Direct
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{investor.main_poc}</TableCell>
+                          <TableCell>
+                            <Badge variant={investor.isPrimaryMarket ? "default" : "secondary"}>
+                              {investor.isPrimaryMarket ? "Primary" : "Secondary"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>Tier {investor.tier}</TableCell>
+                          <TableCell>{investor.weekly_cap}/week</TableCell>
+                          <TableCell>
+                            <Badge 
+                              style={{
+                                backgroundColor: `hsl(${Math.min(investor.matchScore, 100) * 1.2}, 70%, 50%)`,
+                              }}
+                            >
+                              {investor.matchScore}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {investor.hubspot_url && (
+                              <a
+                                href={investor.hubspot_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-primary hover:text-primary/80"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
+      {selectedInvestorFullData && (
+        <InvestorDetailModal
+          open={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setSelectedInvestorFullData(null);
+          }}
+          investor={selectedInvestorFullData}
+          buyBox={selectedInvestorFullData.buy_box?.[0]}
+          markets={selectedInvestorFullData.markets || []}
+          onEdit={() => {
+            // Optionally handle edit functionality
+            setModalOpen(false);
+          }}
+        />
       )}
     </div>
   );
 }
 
-function InvestorMatchCard({ investor }: { investor: MatchedInvestor }) {
+function InvestorMatchCard({ investor, onClick }: { investor: MatchedInvestor; onClick: () => void }) {
   return (
-    <div className="border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors">
+    <div 
+      className="border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
