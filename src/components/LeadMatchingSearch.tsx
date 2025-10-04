@@ -14,8 +14,7 @@ interface LeadData {
   state: string;
   zipCode: string;
   city?: string;
-  priceMin?: number;
-  priceMax?: number;
+  askPrice?: number;
   propertyType?: string;
   condition?: string;
   yearBuilt?: number;
@@ -125,19 +124,19 @@ export function LeadMatchingSearch() {
         // Check buy box criteria
         const buyBox = investor.buy_box?.[0];
         if (buyBox) {
-          // Price match
-          if (leadData.priceMin && leadData.priceMax) {
+          // Check if ask price falls within investor's buy box range
+          if (leadData.askPrice) {
             const buyBoxPriceMin = buyBox.price_min ? Number(buyBox.price_min) : null;
             const buyBoxPriceMax = buyBox.price_max ? Number(buyBox.price_max) : null;
             
             if (buyBoxPriceMin && buyBoxPriceMax) {
               const priceInRange = 
-                leadData.priceMin >= buyBoxPriceMin && 
-                leadData.priceMax <= buyBoxPriceMax;
+                leadData.askPrice >= buyBoxPriceMin && 
+                leadData.askPrice <= buyBoxPriceMax;
               
               if (priceInRange) {
                 matchScore += 20;
-                matchReasons.push("Price range match");
+                matchReasons.push("Price match");
               }
             }
           }
@@ -258,24 +257,26 @@ export function LeadMatchingSearch() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="priceMin">Min Price</Label>
+              <Label htmlFor="askPrice">Sellers Ask Price</Label>
               <Input
-                id="priceMin"
+                id="askPrice"
                 type="number"
-                placeholder="50000"
-                value={leadData.priceMin || ""}
-                onChange={(e) => setLeadData({ ...leadData, priceMin: Number(e.target.value) })}
+                placeholder="125000"
+                value={leadData.askPrice || ""}
+                onChange={(e) => setLeadData({ ...leadData, askPrice: Number(e.target.value) })}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="priceMax">Max Price</Label>
+              <Label htmlFor="yearBuilt">Year Built</Label>
               <Input
-                id="priceMax"
+                id="yearBuilt"
                 type="number"
-                placeholder="500000"
-                value={leadData.priceMax || ""}
-                onChange={(e) => setLeadData({ ...leadData, priceMax: Number(e.target.value) })}
+                placeholder="1995"
+                min="1800"
+                max="2025"
+                value={leadData.yearBuilt || ""}
+                onChange={(e) => setLeadData({ ...leadData, yearBuilt: Number(e.target.value) })}
               />
             </div>
 
