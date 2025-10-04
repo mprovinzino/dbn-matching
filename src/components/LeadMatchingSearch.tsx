@@ -75,10 +75,20 @@ export function LeadMatchingSearch() {
       investors?.forEach((investor) => {
         let matchScore = 0;
         const matchReasons: string[] = [];
-        let isFullCoverage = false;
+        
+        // Check for national coverage first
+        const hasNationalCoverage = investor.coverage_type === 'national';
+        
+        let isFullCoverage = hasNationalCoverage; // National investors automatically have full coverage
         let isDirectPurchase = false;
         let isPrimaryMarket = false;
         let isSecondaryMarket = false;
+
+        // Add national coverage bonus
+        if (hasNationalCoverage) {
+          matchScore += 50;
+          matchReasons.push("National coverage");
+        }
 
         // Check market match
         const markets = investor.markets || [];
@@ -116,8 +126,8 @@ export function LeadMatchingSearch() {
           }
         });
 
-        // Only include if there's at least one market match
-        if (!isFullCoverage && !isPrimaryMarket && !isSecondaryMarket) {
+        // Skip if no market match (unless they have national coverage)
+        if (!hasNationalCoverage && !isFullCoverage && !isPrimaryMarket && !isSecondaryMarket) {
           return;
         }
 
