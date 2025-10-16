@@ -73,6 +73,41 @@ export type Database = {
           },
         ]
       }
+      investor_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          id: string
+          investor_id: string
+          label: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          id?: string
+          investor_id: string
+          label?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          id?: string
+          investor_id?: string
+          label?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_documents_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investors: {
         Row: {
           cold_accepts: boolean | null

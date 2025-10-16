@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -5,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Building2, ExternalLink, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ZipCodeManager } from "@/components/ZipCodeManager";
+import { supabase } from "@/integrations/supabase/client";
 
 interface InvestorDetailModalProps {
   open: boolean;
@@ -23,6 +26,38 @@ export function InvestorDetailModal({
   markets,
   onEdit
 }: InvestorDetailModalProps) {
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [editingZips, setEditingZips] = useState<{ type: string; marketId: string } | null>(null);
+  const [currentMarkets, setCurrentMarkets] = useState(markets);
+
+  useEffect(() => {
+    setCurrentMarkets(markets);
+  }, [markets]);
+
+  useEffect(() => {
+    if (investor && open) {
+      loadDocuments();
+    }
+  }, [investor, open]);
+
+  const loadDocuments = async () => {
+    if (!investor) return;
+    const { data } = await supabase
+      .from("investor_documents")
+      .select("*")
+      .eq("investor_id", investor.id);
+    setDocuments(data || []);
+  };
+
+  const handleZipCodesUpdate = async () => {
+    const { data } = await supabase
+      .from("markets")
+      .select("*")
+      .eq("investor_id", investor.id);
+    setCurrentMarkets(data || []);
+    setEditingZips(null);
+  };
+
   if (!investor) return null;
 
   const getTierColor = (tier: number) => {
@@ -227,18 +262,18 @@ export function InvestorDetailModal({
           )}
 
           {/* Markets */}
-          {markets && markets.length > 0 && (
+          {currentMarkets && currentMarkets.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Market Coverage</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Full Coverage States */}
-                {markets.find(m => m.market_type === 'full_coverage') && (
+                {currentMarkets.find(m => m.market_type === 'full_coverage') && (
                   <div>
                     <h4 className="font-semibold text-sm mb-3 text-blue-600">Full Coverage States</h4>
                     <div className="flex gap-1 flex-wrap">
-                      {markets.find(m => m.market_type === 'full_coverage')?.states?.map((state: string) => (
+                      {currentMarkets.find(m => m.market_type === 'full_coverage')?.states?.map((state: string) => (
                         <Badge key={state} variant="default">{state}</Badge>
                       ))}
                     </div>
@@ -246,26 +281,16 @@ export function InvestorDetailModal({
                 )}
 
                 {/* Direct Purchase Markets */}
-                {markets.find(m => m.market_type === 'direct_purchase') && (
+                {currentMarkets.find(m => m.market_type === 'direct_purchase') && (
                   <div>
                     <h4 className="font-semibold text-sm mb-3 text-green-600">Direct Purchase Markets</h4>
                     <div className="space-y-2">
-                      {markets.find(m => m.market_type === 'direct_purchase')?.states?.length > 0 && (
+                      {currentMarkets.find(m => m.market_type === 'direct_purchase')?.states?.length > 0 && (
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">States</p>
                           <div className="flex gap-1 flex-wrap">
-                            {markets.find(m => m.market_type === 'direct_purchase')?.states?.map((state: string) => (
+                            {currentMarkets.find(m => m.market_type === 'direct_purchase')?.states?.map((state: string) => (
                               <Badge key={state} variant="outline">{state}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {markets.find(m => m.market_type === 'direct_purchase')?.zip_codes?.length > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Zip Codes</p>
-                          <div className="flex gap-1 flex-wrap max-h-20 overflow-y-auto">
-                            {markets.find(m => m.market_type === 'direct_purchase')?.zip_codes?.map((zip: string) => (
-                              <Badge key={zip} variant="outline">{zip}</Badge>
                             ))}
                           </div>
                         </div>
@@ -275,25 +300,139 @@ export function InvestorDetailModal({
                 )}
 
                 {/* Primary Markets */}
-                {markets.find(m => m.market_type === 'primary') && (
+                {currentMarkets.find(m => m.market_type === 'primary') && (
                   <div>
-                    <h4 className="font-semibold text-sm mb-3 text-purple-600">Primary Market Zip Codes</h4>
-                    <div className="flex gap-1 flex-wrap max-h-40 overflow-y-auto">
-                      {markets.find(m => m.market_type === 'primary')?.zip_codes?.map((zip: string) => (
-                        <Badge key={zip} variant="secondary">{zip}</Badge>
-                      ))}
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-sm text-purple-600">Primary Market</h4>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setEditingZips({ 
+                          type: 'primary', 
+                          marketId: currentMarkets.find(m => m.market_type === 'primary')!.id 
+                        })}
+                      >
+                        {currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length > 0 ? 'Edit' : 'Add Zip Codes'}
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">States</p>
+                        <div className="flex gap-1 flex-wrap">
+                          {currentMarkets.find(m => m.market_type === 'primary')?.states?.map((state: string) => (
+                            <Badge key={state} variant="secondary">{state}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      {currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Zip Codes ({currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length} codes)
+                          </p>
+                          <div className="text-sm text-muted-foreground">
+                            {currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.slice(0, 10).join(', ')}
+                            {currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length > 10 && 
+                              ` ... and ${currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length - 10} more`}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {/* Secondary Markets */}
-                {markets.find(m => m.market_type === 'secondary') && (
+                {currentMarkets.find(m => m.market_type === 'secondary') && (
                   <div>
-                    <h4 className="font-semibold text-sm mb-3 text-amber-600">Secondary Market Zip Codes</h4>
-                    <div className="flex gap-1 flex-wrap max-h-40 overflow-y-auto">
-                      {markets.find(m => m.market_type === 'secondary')?.zip_codes?.map((zip: string) => (
-                        <Badge key={zip} variant="outline">{zip}</Badge>
-                      ))}
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-sm text-amber-600">Secondary Market</h4>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setEditingZips({ 
+                          type: 'secondary', 
+                          marketId: currentMarkets.find(m => m.market_type === 'secondary')!.id 
+                        })}
+                      >
+                        {currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length > 0 ? 'Edit' : 'Add Zip Codes'}
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">States</p>
+                        <div className="flex gap-1 flex-wrap">
+                          {currentMarkets.find(m => m.market_type === 'secondary')?.states?.map((state: string) => (
+                            <Badge key={state} variant="outline">{state}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      {currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Zip Codes ({currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length} codes)
+                          </p>
+                          <div className="text-sm text-muted-foreground">
+                            {currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.slice(0, 10).join(', ')}
+                            {currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length > 10 && 
+                              ` ... and ${currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length - 10} more`}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Documents */}
+          {documents.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Reference Documents</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {documents.filter(d => d.document_type === 'primary_zips').length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2">Primary Zip Code Sheets</h4>
+                    <div className="space-y-1">
+                      {documents
+                        .filter(d => d.document_type === 'primary_zips')
+                        .map((doc) => (
+                          <Button
+                            key={doc.id}
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => window.open(doc.url, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            {doc.label || 'Zip Code Sheet'}
+                          </Button>
+                        ))
+                      }
+                    </div>
+                  </div>
+                )}
+                
+                {documents.filter(d => d.document_type === 'past_experience').length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2">Past Experience Documents</h4>
+                    <div className="space-y-1">
+                      {documents
+                        .filter(d => d.document_type === 'past_experience')
+                        .map((doc) => (
+                          <Button
+                            key={doc.id}
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => window.open(doc.url, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            {doc.label || 'Experience Document'}
+                          </Button>
+                        ))
+                      }
                     </div>
                   </div>
                 )}
@@ -301,6 +440,21 @@ export function InvestorDetailModal({
             </Card>
           )}
         </div>
+
+        {/* Zip Code Manager Dialog */}
+        {editingZips && (
+          <ZipCodeManager
+            open={!!editingZips}
+            onClose={() => setEditingZips(null)}
+            marketId={editingZips.marketId}
+            marketType={editingZips.type as "primary" | "secondary" | "direct_purchase"}
+            currentZipCodes={currentMarkets.find(m => m.id === editingZips.marketId)?.zip_codes || []}
+            onUpdate={handleZipCodesUpdate}
+            referenceSheetUrls={documents
+              .filter(d => d.document_type === 'primary_zips')
+              .map(d => d.url)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

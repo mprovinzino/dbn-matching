@@ -11,6 +11,7 @@ import { InvestorDetailModal } from "@/components/InvestorDetailModal";
 import { AddInvestorForm } from "@/components/AddInvestorForm";
 import { EditInvestorForm } from "@/components/EditInvestorForm";
 import { LeadMatchingSearch } from "@/components/LeadMatchingSearch";
+import { QuickAddFromSheet } from "@/components/QuickAddFromSheet";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
@@ -27,6 +28,7 @@ const Dashboard = () => {
   const [hasCheckedForSeed, setHasCheckedForSeed] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles");
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -318,6 +320,9 @@ const Dashboard = () => {
               <List className="h-4 w-4" />
             </Button>
           </div>
+          <Button onClick={() => setQuickAddOpen(true)} variant="secondary">
+            Quick Add from Sheet
+          </Button>
           <Button onClick={() => setAddModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Investor
@@ -444,6 +449,12 @@ const Dashboard = () => {
       <AddInvestorForm
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
+        onSuccess={loadInvestors}
+      />
+
+      <QuickAddFromSheet
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
         onSuccess={loadInvestors}
       />
     </div>
