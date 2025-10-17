@@ -7,6 +7,7 @@ import { AlertCircle, Building2, ExternalLink, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ZipCodeManager } from "@/components/ZipCodeManager";
+import { DmaCoverageDisplay } from "@/components/DmaCoverageDisplay";
 import { supabase } from "@/integrations/supabase/client";
 
 interface InvestorDetailModalProps {
@@ -261,7 +262,7 @@ export function InvestorDetailModal({
             </Card>
           )}
 
-          {/* Markets */}
+          {/* Markets with DMA Coverage */}
           {currentMarkets && currentMarkets.length > 0 && (
             <Card>
               <CardHeader>
@@ -280,105 +281,81 @@ export function InvestorDetailModal({
                   </div>
                 )}
 
-                {/* Direct Purchase Markets */}
+                {/* Direct Purchase Markets with DMA */}
                 {currentMarkets.find(m => m.market_type === 'direct_purchase') && (
-                  <div>
-                    <h4 className="font-semibold text-sm mb-3 text-green-600">Direct Purchase Markets</h4>
-                    <div className="space-y-2">
-                      {currentMarkets.find(m => m.market_type === 'direct_purchase')?.states?.length > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">States</p>
-                          <div className="flex gap-1 flex-wrap">
-                            {currentMarkets.find(m => m.market_type === 'direct_purchase')?.states?.map((state: string) => (
-                              <Badge key={state} variant="outline">{state}</Badge>
-                            ))}
-                          </div>
+                  <>
+                    {currentMarkets.find(m => m.market_type === 'direct_purchase')?.states?.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-3 text-green-600">Direct Purchase States</h4>
+                        <div className="flex gap-1 flex-wrap">
+                          {currentMarkets.find(m => m.market_type === 'direct_purchase')?.states?.map((state: string) => (
+                            <Badge key={state} variant="outline">{state}</Badge>
+                          ))}
                         </div>
-                      )}
-                    </div>
-                  </div>
+                      </div>
+                    )}
+                    {currentMarkets.find(m => m.market_type === 'direct_purchase')?.zip_codes?.length > 0 && (
+                      <DmaCoverageDisplay
+                        marketType="direct_purchase"
+                        zipCodes={currentMarkets.find(m => m.market_type === 'direct_purchase')!.zip_codes}
+                        label="Direct Purchase Zip Coverage"
+                        onEdit={() => setEditingZips({ 
+                          type: 'direct_purchase', 
+                          marketId: currentMarkets.find(m => m.market_type === 'direct_purchase')!.id 
+                        })}
+                      />
+                    )}
+                  </>
                 )}
 
-                {/* Primary Markets */}
+                {/* Primary Markets with DMA */}
                 {currentMarkets.find(m => m.market_type === 'primary') && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-sm text-purple-600">Primary Market</h4>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setEditingZips({ 
-                          type: 'primary', 
-                          marketId: currentMarkets.find(m => m.market_type === 'primary')!.id 
-                        })}
-                      >
-                        {currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length > 0 ? 'Edit' : 'Add Zip Codes'}
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
+                  <>
+                    {currentMarkets.find(m => m.market_type === 'primary')?.states?.length > 0 && (
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">States</p>
-                        <div className="flex gap-1 flex-wrap">
+                        <h4 className="font-semibold text-sm mb-2 text-purple-600">Primary Market States</h4>
+                        <div className="flex gap-1 flex-wrap mb-4">
                           {currentMarkets.find(m => m.market_type === 'primary')?.states?.map((state: string) => (
                             <Badge key={state} variant="secondary">{state}</Badge>
                           ))}
                         </div>
                       </div>
-                      {currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Zip Codes ({currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length} codes)
-                          </p>
-                          <div className="text-sm text-muted-foreground">
-                            {currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.slice(0, 10).join(', ')}
-                            {currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length > 10 && 
-                              ` ... and ${currentMarkets.find(m => m.market_type === 'primary')?.zip_codes?.length - 10} more`}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    )}
+                    <DmaCoverageDisplay
+                      marketType="primary"
+                      zipCodes={currentMarkets.find(m => m.market_type === 'primary')?.zip_codes || []}
+                      label="Primary Market Zip Coverage"
+                      onEdit={() => setEditingZips({ 
+                        type: 'primary', 
+                        marketId: currentMarkets.find(m => m.market_type === 'primary')!.id 
+                      })}
+                    />
+                  </>
                 )}
 
-                {/* Secondary Markets */}
+                {/* Secondary Markets with DMA */}
                 {currentMarkets.find(m => m.market_type === 'secondary') && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-sm text-amber-600">Secondary Market</h4>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setEditingZips({ 
-                          type: 'secondary', 
-                          marketId: currentMarkets.find(m => m.market_type === 'secondary')!.id 
-                        })}
-                      >
-                        {currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length > 0 ? 'Edit' : 'Add Zip Codes'}
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
+                  <>
+                    {currentMarkets.find(m => m.market_type === 'secondary')?.states?.length > 0 && (
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">States</p>
-                        <div className="flex gap-1 flex-wrap">
+                        <h4 className="font-semibold text-sm mb-2 text-amber-600">Secondary Market States</h4>
+                        <div className="flex gap-1 flex-wrap mb-4">
                           {currentMarkets.find(m => m.market_type === 'secondary')?.states?.map((state: string) => (
                             <Badge key={state} variant="outline">{state}</Badge>
                           ))}
                         </div>
                       </div>
-                      {currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Zip Codes ({currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length} codes)
-                          </p>
-                          <div className="text-sm text-muted-foreground">
-                            {currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.slice(0, 10).join(', ')}
-                            {currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length > 10 && 
-                              ` ... and ${currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes?.length - 10} more`}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    )}
+                    <DmaCoverageDisplay
+                      marketType="secondary"
+                      zipCodes={currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes || []}
+                      label="Secondary Market Zip Coverage"
+                      onEdit={() => setEditingZips({ 
+                        type: 'secondary', 
+                        marketId: currentMarkets.find(m => m.market_type === 'secondary')!.id 
+                      })}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>

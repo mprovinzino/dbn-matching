@@ -265,7 +265,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_dma_coverage: {
+        Args: { market_zip_codes: string[] }
+        Returns: {
+          dma: string
+          sample_zips: string[]
+          state: string
+          zip_count: number
+        }[]
+      }
     }
     Enums: {
       coverage_type: "local" | "multi_state" | "state" | "national"

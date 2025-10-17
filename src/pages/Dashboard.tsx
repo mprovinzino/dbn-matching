@@ -12,6 +12,7 @@ import { AddInvestorForm } from "@/components/AddInvestorForm";
 import { EditInvestorForm } from "@/components/EditInvestorForm";
 import { LeadMatchingSearch } from "@/components/LeadMatchingSearch";
 import { QuickAddFromSheet } from "@/components/QuickAddFromSheet";
+import { DmaImportButton } from "@/components/DmaImportButton";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
@@ -320,6 +321,7 @@ const Dashboard = () => {
               <List className="h-4 w-4" />
             </Button>
           </div>
+          <DmaImportButton />
           <Button onClick={() => setQuickAddOpen(true)} variant="secondary">
             Quick Add from Sheet
           </Button>
