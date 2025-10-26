@@ -84,24 +84,24 @@ export async function importDmaZipCodes(file: File) {
         longitude: null,
       }));
     
-    // Batch insert in chunks of 1000 to avoid timeouts
-    let imported = 0;
-    for (let i = 0; i < zipCodeData.length; i += 1000) {
-      const chunk = zipCodeData.slice(i, i + 1000);
-      const { error } = await supabase
-        .from('zip_code_reference')
-        .insert(chunk);
-      
-      if (error) {
-        console.error('Error inserting chunk:', error);
-        throw error;
-      }
-      
-      imported += chunk.length;
+    console.log(`Sending ${zipCodeData.length} zip codes to edge function`);
+    
+    // Call edge function with service role access
+    const { data, error } = await supabase.functions.invoke('import-dma-data', {
+      body: { zipCodeData }
+    });
+    
+    if (error) {
+      console.error('Edge function error:', error);
+      throw error;
+    }
+    
+    if (!data.success) {
+      throw new Error('Import failed');
     }
     
     return { 
-      imported, 
+      imported: data.imported, 
       total: zipCodeData.length,
       uniqueDmas: [...new Set(zipCodeData.map(z => z.dma))].length 
     };

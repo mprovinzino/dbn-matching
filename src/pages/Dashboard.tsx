@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Plus, Filter, FlaskConical, PauseCircle, LayoutGrid, List, ExternalLink } from "lucide-react";
+import { Building2, Users, Plus, Filter, FlaskConical, PauseCircle, LayoutGrid, List, ExternalLink, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InvestorCard } from "@/components/InvestorCard";
 import { InvestorDetailModal } from "@/components/InvestorDetailModal";
@@ -14,6 +14,7 @@ import { LeadMatchingSearch } from "@/components/LeadMatchingSearch";
 import { QuickAddFromSheet } from "@/components/QuickAddFromSheet";
 import { DmaImportButton } from "@/components/DmaImportButton";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [investors, setInvestors] = useState<any[]>([]);
@@ -31,6 +32,7 @@ const Dashboard = () => {
   const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadInvestors();
@@ -321,6 +323,13 @@ const Dashboard = () => {
               <List className="h-4 w-4" />
             </Button>
           </div>
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/coverage-map")}
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            Coverage Map
+          </Button>
           <DmaImportButton />
           <Button onClick={() => setQuickAddOpen(true)} variant="secondary">
             Quick Add from Sheet

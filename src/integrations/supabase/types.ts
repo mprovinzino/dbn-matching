@@ -274,6 +274,33 @@ export type Database = {
           zip_count: number
         }[]
       }
+      get_dma_coverage_density: {
+        Args: never
+        Returns: {
+          direct_count: number
+          dma: string
+          full_coverage_count: number
+          investor_count: number
+          investor_ids: string[]
+          primary_count: number
+          secondary_count: number
+          state: string
+          total_zip_codes: number
+        }[]
+      }
+      get_investors_by_dma: {
+        Args: { dma_name: string }
+        Returns: {
+          company_name: string
+          coverage_type: string
+          investor_id: string
+          main_poc: string
+          market_type: string
+          status: string
+          tier: number
+          zip_count: number
+        }[]
+      }
     }
     Enums: {
       coverage_type: "local" | "multi_state" | "state" | "national"

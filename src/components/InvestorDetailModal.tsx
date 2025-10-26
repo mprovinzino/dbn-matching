@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Building2, ExternalLink, Edit } from "lucide-react";
+import { AlertCircle, Building2, ExternalLink, Edit, MapPin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ZipCodeManager } from "@/components/ZipCodeManager";
@@ -27,6 +28,7 @@ export function InvestorDetailModal({
   markets,
   onEdit
 }: InvestorDetailModalProps) {
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState<any[]>([]);
   const [editingZips, setEditingZips] = useState<{ type: string; marketId: string } | null>(null);
   const [currentMarkets, setCurrentMarkets] = useState(markets);
@@ -102,6 +104,14 @@ export function InvestorDetailModal({
               <Badge className={`bg-${getTierColor(investor.tier)}`}>
                 Tier {investor.tier}
               </Badge>
+              <Button 
+                onClick={() => navigate(`/coverage-map?investor=${investor.id}`)} 
+                size="sm"
+                variant="outline"
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                View on Map
+              </Button>
               <Button variant="outline" size="sm" onClick={onEdit}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
