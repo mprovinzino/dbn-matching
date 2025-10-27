@@ -10,6 +10,7 @@ interface SearchSuggestion {
   id: string;
   label: string;
   sublabel?: string;
+  status?: string;
 }
 
 interface SearchAutocompleteProps {
@@ -41,10 +42,12 @@ export function SearchAutocomplete({ value, onChange }: SearchAutocompleteProps)
         // Search investors
         const { data: investors } = await supabase
           .from('investors')
-          .select('id, company_name')
+          .select('id, company_name, status')
           .ilike('company_name', `%${searchLower}%`)
-          .eq('status', 'active')
           .limit(5);
+
+        console.log('🔍 Autocomplete search:', searchLower);
+        console.log('📊 Investors found:', investors?.length, investors);
 
         if (investors) {
           investors.forEach(inv => {
@@ -52,7 +55,8 @@ export function SearchAutocomplete({ value, onChange }: SearchAutocompleteProps)
               type: "investor",
               id: inv.id,
               label: inv.company_name,
-              sublabel: "Investor"
+              sublabel: "Investor",
+              status: inv.status
             });
           });
         }
@@ -99,6 +103,7 @@ export function SearchAutocomplete({ value, onChange }: SearchAutocompleteProps)
           });
         }
 
+        console.log('🎯 Suggestions:', results.length);
         setSuggestions(results);
         setIsOpen(results.length > 0);
         setSelectedIndex(0);
@@ -208,7 +213,7 @@ export function SearchAutocomplete({ value, onChange }: SearchAutocompleteProps)
       {isOpen && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-[300px] overflow-y-auto"
+          className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-lg shadow-lg z-[100] max-h-[300px] overflow-y-auto"
         >
           <div className="py-1">
             {suggestions.map((suggestion, index) => (
@@ -224,8 +229,13 @@ export function SearchAutocomplete({ value, onChange }: SearchAutocompleteProps)
               >
                 {getIcon(suggestion.type)}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">
+                  <div className="font-medium text-sm truncate flex items-center gap-2">
                     {suggestion.label}
+                    {suggestion.status && suggestion.status !== 'active' && (
+                      <span className="text-xs px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded">
+                        {suggestion.status}
+                      </span>
+                    )}
                   </div>
                   {suggestion.sublabel && (
                     <div className="text-xs text-muted-foreground">
