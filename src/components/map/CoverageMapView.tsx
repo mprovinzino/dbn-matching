@@ -77,11 +77,14 @@ export function CoverageMapView({
     }, 8000);
 
     map.current.on("load", () => {
+      console.log("✅ Mapbox map loaded successfully");
       clearTimeout(failSafe);
+      map.current?.resize();
       setMapLoaded(true);
     });
 
-    map.current.on("error", () => {
+    map.current.on("error", (e) => {
+      console.error("⚠️ Mapbox error:", e.error);
       // Show UI even if map style fails to load
       clearTimeout(failSafe);
       setMapLoaded(true);
@@ -211,16 +214,17 @@ export function CoverageMapView({
     }
   }, [searchQuery, coverage, mapLoaded]);
 
-  if (!mapLoaded) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-muted/30">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading map...</p>
+  return (
+    <div className="flex-1 relative">
+      <div ref={mapContainer} className="absolute inset-0" />
+      {!mapLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/30 z-10">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading map...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  return <div ref={mapContainer} className="flex-1" />;
+      )}
+    </div>
+  );
 }
