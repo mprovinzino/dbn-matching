@@ -1,9 +1,9 @@
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Filter, Loader2 } from "lucide-react";
+import { Filter, Loader2 } from "lucide-react";
+import { SearchAutocomplete } from "./SearchAutocomplete";
 
 interface MapControlsProps {
   searchQuery: string;
@@ -61,27 +61,19 @@ export function MapControls({
       </Card>
 
       {/* Search */}
-      <div className="space-y-2">
-        <Label htmlFor="search" className="flex items-center gap-2">
-          <Search className="h-4 w-4" />
-          Search Investor or DMA
-        </Label>
-        <Input
-          id="search"
-          placeholder="Type to search..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-        {searchQuery && (
-          <div className="text-xs text-muted-foreground mt-1 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
-            <span className="font-semibold text-blue-600 dark:text-blue-400">Filtered View:</span>{" "}
-            Showing coverage for "{searchQuery}"
-            {isFetching && (
-              <Loader2 className="inline-block ml-2 h-3 w-3 animate-spin" />
-            )}
-          </div>
-        )}
-      </div>
+      <SearchAutocomplete
+        value={searchQuery}
+        onChange={onSearchChange}
+      />
+      {searchQuery && (
+        <div className="text-xs text-muted-foreground p-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
+          <span className="font-semibold text-blue-600 dark:text-blue-400">Filtered View:</span>{" "}
+          Showing coverage for "{searchQuery}"
+          {isFetching && (
+            <Loader2 className="inline-block ml-2 h-3 w-3 animate-spin" />
+          )}
+        </div>
+      )}
 
       {/* Market Type Filter */}
       <div className="space-y-3">
