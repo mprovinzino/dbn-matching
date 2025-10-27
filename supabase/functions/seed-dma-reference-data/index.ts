@@ -125,13 +125,19 @@ Deno.serve(async (req) => {
   );
 
   try {
-    console.log('Starting DMA reference data seeding from Excel file...');
-    
-    // Parse the DMA data from the uploaded Excel
-    const { data: dmaData, error: parseError } = await req.json();
-    
-    if (parseError || !dmaData || !Array.isArray(dmaData)) {
-      throw new Error('Invalid DMA data format. Expected array of { zip_code, dma_code, dma_description }');
+    console.log('Starting DMA reference data seeding from request payload...');
+
+    // Tolerant body parsing: accept raw array or object-wrapped arrays
+    let dmaData: any[] | null = null;
+    try {
+      const body = await req.json();
+      dmaData = Array.isArray(body) ? body : (body?.dmaRecords || body?.zipCodeData || body?.data);
+    } catch (_) {
+      dmaData = null;
+    }
+
+    if (!Array.isArray(dmaData)) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid DMA data format. Expected array of { zip_code, dma_code, dma_description }' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     console.log(`Received ${dmaData.length} DMA records to import`);

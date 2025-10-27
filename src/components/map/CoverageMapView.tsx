@@ -71,11 +71,24 @@ export function CoverageMapView({
       "top-right"
     );
 
+    const failSafe = setTimeout(() => {
+      // Avoid infinite spinner if style/token fails
+      setMapLoaded(true);
+    }, 8000);
+
     map.current.on("load", () => {
+      clearTimeout(failSafe);
+      setMapLoaded(true);
+    });
+
+    map.current.on("error", () => {
+      // Show UI even if map style fails to load
+      clearTimeout(failSafe);
       setMapLoaded(true);
     });
 
     return () => {
+      clearTimeout(failSafe);
       markers.current.forEach((marker) => marker.remove());
       markers.current = [];
       map.current?.remove();

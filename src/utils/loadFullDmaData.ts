@@ -10,7 +10,10 @@ export async function loadFullDmaData() {
     });
 
     // Fetch the Excel file from the project
-    const response = await fetch('/src/data/DMA_Zipcodes.xlsx');
+    const response = await fetch('/data/DMA_Zipcodes.xlsx');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch DMA Excel: ${response.status} ${response.statusText}`);
+    }
     const arrayBuffer = await response.arrayBuffer();
     
     // Parse Excel file
