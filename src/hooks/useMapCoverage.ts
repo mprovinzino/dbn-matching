@@ -65,3 +65,19 @@ export function useDmaInvestors(dmaName: string | null) {
     enabled: !!dmaName,
   });
 }
+
+export function useNationalCoverageCount() {
+  return useQuery({
+    queryKey: ['national-coverage-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('markets')
+        .select('investor_id', { count: 'exact', head: true })
+        .eq('market_type', 'full_coverage');
+      
+      if (error) throw error;
+      return count || 0;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
