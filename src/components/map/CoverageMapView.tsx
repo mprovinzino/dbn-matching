@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { DmaCoverageData, useNationalCoverageCount } from "@/hooks/useMapCoverage";
+import { DmaCoverageData, useInvestorsByState } from "@/hooks/useMapCoverage";
 import { Loader2 } from "lucide-react";
 
 interface CoverageMapViewProps {
@@ -22,7 +22,10 @@ export function CoverageMapView({
   const markers = useRef<mapboxgl.Marker[]>([]);
   const stateDataRef = useRef<Record<string, { totalInvestors: number; dmas: DmaCoverageData[] }>>({});
   const [mapLoaded, setMapLoaded] = useState(false);
-  const { data: nationalCount = 0 } = useNationalCoverageCount();
+  const [hoveredState, setHoveredState] = useState<string | null>(null);
+  const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
+  
+  const { data: investorDetails } = useInvestorsByState(hoveredState);
 
   // State-level coordinates (approximate centers)
   const stateCoordinates: Record<string, [number, number]> = {
@@ -82,42 +85,6 @@ export function CoverageMapView({
       console.log("✅ Mapbox map loaded successfully");
       clearTimeout(failSafe);
       map.current?.resize();
-      
-      // Add US states base layer for national coverage visualization
-      if (map.current) {
-        const mapInstance = map.current;
-        
-        // Add US states source (using Mapbox's built-in tileset)
-        mapInstance.addSource('us-states-base', {
-          type: 'vector',
-          url: 'mapbox://mapbox.us_census_states_2015'
-        });
-        
-        // Add subtle fill layer for all US states (represents national coverage)
-        mapInstance.addLayer({
-          id: 'us-states-fill',
-          type: 'fill',
-          source: 'us-states-base',
-          'source-layer': 'states',
-          paint: {
-            'fill-color': '#93c5fd',
-            'fill-opacity': 0.15
-          }
-        });
-        
-        // Add state borders
-        mapInstance.addLayer({
-          id: 'us-states-border',
-          type: 'line',
-          source: 'us-states-base',
-          'source-layer': 'states',
-          paint: {
-            'line-color': '#e5e7eb',
-            'line-width': 1
-          }
-        });
-      }
-      
       setMapLoaded(true);
     });
 
@@ -254,13 +221,26 @@ export function CoverageMapView({
         },
       });
 
-      // Interactions
-      mapInstance.on('mouseenter', circleLayerId, () => {
+      // Interactions - hover to preview investors
+      mapInstance.on('mouseenter', circleLayerId, (e) => {
         mapInstance.getCanvas().style.cursor = 'pointer';
+        const feature = e.features?.[0];
+        const state = feature && (feature.properties as any)?.state;
+        if (state) {
+          setHoveredState(state);
+        }
       });
+      
       mapInstance.on('mouseleave', circleLayerId, () => {
         mapInstance.getCanvas().style.cursor = '';
+        setHoveredState(null);
+        if (hoverPopupRef.current) {
+          hoverPopupRef.current.remove();
+          hoverPopupRef.current = null;
+        }
       });
+      
+      // Click for detailed DMA breakdown
       mapInstance.on('click', circleLayerId, (e) => {
         const feature = e.features?.[0];
         const state = feature && (feature.properties as any)?.state;
@@ -270,21 +250,12 @@ export function CoverageMapView({
         const data = stateDataRef.current[state];
         if (!data) return;
 
-        const totalWithNational = data.totalInvestors + nationalCount;
         const html = `
           <div style="padding: 8px;">
             <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
-            <p style="font-size: 12px; color: #666; margin-bottom: 4px;">
-              ${data.totalInvestors} DMA-specific investor${data.totalInvestors !== 1 ? 's' : ''}
+            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
+              ${data.totalInvestors} total investor${data.totalInvestors !== 1 ? 's' : ''}
             </p>
-            ${nationalCount > 0 ? `
-              <p style="font-size: 12px; color: #666; margin-bottom: 4px;">
-                + ${nationalCount} national investor${nationalCount !== 1 ? 's' : ''}
-              </p>
-              <p style="font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">
-                = ${totalWithNational} total investor${totalWithNational !== 1 ? 's' : ''}
-              </p>
-            ` : ''}
             <div style="max-height: 200px; overflow-y: auto;">
               ${data.dmas
                 .sort((a, b) => b.investor_count - a.investor_count)
@@ -323,6 +294,75 @@ export function CoverageMapView({
     };
   }, [coverage, mapLoaded, onDmaClick]);
 
+  // Effect to show hover tooltip with investor details
+  useEffect(() => {
+    if (!map.current || !hoveredState || !investorDetails) return;
+
+    const stateData = stateDataRef.current[hoveredState];
+    if (!stateData) return;
+
+    const coordinates = stateCoordinates[hoveredState];
+    if (!coordinates) return;
+
+    // Remove previous hover popup
+    if (hoverPopupRef.current) {
+      hoverPopupRef.current.remove();
+    }
+
+    const { national, dmaSpecific } = investorDetails;
+    const totalCount = national.length + dmaSpecific.length;
+
+    const formatInvestor = (inv: any) => `
+      <div style="padding: 2px 0; font-size: 11px;">
+        • ${inv.company_name} <span style="color: #666;">(${inv.market_type === 'full_coverage' ? 'National' : inv.market_type})</span>
+      </div>
+    `;
+
+    const html = `
+      <div style="padding: 8px; min-width: 200px;">
+        <h3 style="font-weight: bold; margin-bottom: 4px;">${hoveredState}</h3>
+        <p style="font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">
+          Total: ${totalCount} investor${totalCount !== 1 ? 's' : ''}
+        </p>
+        
+        ${national.length > 0 ? `
+          <div style="margin-bottom: 8px;">
+            <div style="font-size: 12px; font-weight: 600; color: #2563eb; margin-bottom: 4px;">
+              National Coverage (${national.length}):
+            </div>
+            ${national.map(formatInvestor).join('')}
+          </div>
+        ` : ''}
+        
+        ${dmaSpecific.length > 0 ? `
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: #059669; margin-bottom: 4px;">
+              DMA-Specific (${dmaSpecific.length}):
+            </div>
+            <div style="max-height: 150px; overflow-y: auto;">
+              ${dmaSpecific.map(formatInvestor).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #666;">
+          Click for DMA breakdown
+        </div>
+      </div>
+    `;
+
+    hoverPopupRef.current = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      maxWidth: "350px",
+      className: "hover-popup",
+    })
+      .setLngLat(coordinates)
+      .setHTML(html)
+      .addTo(map.current);
+
+  }, [hoveredState, investorDetails]);
+
   // Handle search highlighting
   useEffect(() => {
     if (!map.current || !mapLoaded || !searchQuery || !coverage) return;
@@ -350,17 +390,6 @@ export function CoverageMapView({
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Loading map...</p>
           </div>
-        </div>
-      )}
-      {mapLoaded && nationalCount > 0 && (
-        <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-sm border rounded-lg p-3 shadow-lg z-10 max-w-xs">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-4 h-4 bg-blue-300 opacity-15 border border-gray-300 rounded"></div>
-            <span className="text-xs font-medium">National Coverage</span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {nationalCount} investor{nationalCount !== 1 ? 's' : ''} cover all US markets
-          </p>
         </div>
       )}
     </div>
