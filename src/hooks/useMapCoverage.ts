@@ -29,6 +29,32 @@ export function useMapCoverage(filters: MapFilters) {
       
       let filtered = data as DmaCoverageData[];
       
+      // Apply search query filter (investor name or DMA name)
+      if (filters.searchQuery && filters.searchQuery.trim()) {
+        const searchLower = filters.searchQuery.toLowerCase().trim();
+        
+        // Search for matching investors by company name
+        const { data: investors } = await supabase
+          .from('investors')
+          .select('id, company_name')
+          .ilike('company_name', `%${searchLower}%`);
+        
+        const matchingInvestorIds = new Set(investors?.map(inv => inv.id) || []);
+        
+        // Filter DMAs: show if DMA name matches OR if any matching investor covers it
+        filtered = filtered.filter(dma => {
+          // Check if DMA name matches search
+          const dmaNameMatches = dma.dma.toLowerCase().includes(searchLower);
+          
+          // Check if any investor covering this DMA matches search
+          const hasMatchingInvestor = dma.investor_ids.some(id => 
+            matchingInvestorIds.has(id)
+          );
+          
+          return dmaNameMatches || hasMatchingInvestor;
+        });
+      }
+      
       // Apply market type filter
       if (filters.marketType !== 'all') {
         filtered = filtered.filter(dma => {

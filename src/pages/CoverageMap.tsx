@@ -15,15 +15,25 @@ export default function CoverageMap() {
   const investorParam = searchParams.get("investor");
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [marketType, setMarketType] = useState("all");
   const [minInvestors, setMinInvestors] = useState(0);
   const [selectedDma, setSelectedDma] = useState<string | null>(null);
   const [totalInvestors, setTotalInvestors] = useState(0);
 
+  // Debounce search to prevent refetching on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const { data: coverage, isLoading, error } = useMapCoverage({
     marketType,
     minInvestors,
-    searchQuery,
+    searchQuery: debouncedSearch,
   });
 
   // Load total investor count

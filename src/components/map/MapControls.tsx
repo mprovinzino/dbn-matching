@@ -70,6 +70,12 @@ export function MapControls({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
         />
+        {searchQuery && (
+          <div className="text-xs text-muted-foreground mt-1 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
+            <span className="font-semibold text-blue-600 dark:text-blue-400">Filtered View:</span>{" "}
+            Showing coverage for "{searchQuery}"
+          </div>
+        )}
       </div>
 
       {/* Market Type Filter */}
