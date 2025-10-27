@@ -157,14 +157,18 @@ export function useNationalCoverageCount() {
   return useQuery({
     queryKey: ['national-coverage-count'],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('investors')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .eq('coverage_type', 'national');
+      // Count distinct investors with full_coverage market_type
+      const { data, error } = await supabase
+        .from('markets')
+        .select('investor_id')
+        .eq('market_type', 'full_coverage');
       
       if (error) throw error;
-      return { count: count || 0 };
+      
+      // Get unique investor IDs
+      const uniqueInvestorIds = new Set(data?.map(m => m.investor_id) || []);
+      
+      return { count: uniqueInvestorIds.size };
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
