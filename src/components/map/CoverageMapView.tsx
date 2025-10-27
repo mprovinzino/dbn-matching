@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { DmaCoverageData, useInvestorsByState } from "@/hooks/useMapCoverage";
+import { DmaCoverageData, useInvestorsByState, useNationalCoverageCount } from "@/hooks/useMapCoverage";
 import { Loader2 } from "lucide-react";
 
 interface CoverageMapViewProps {
@@ -26,6 +26,7 @@ export function CoverageMapView({
   const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
   
   const { data: investorDetails } = useInvestorsByState(hoveredState);
+  const { data: nationalCoverageData } = useNationalCoverageCount();
 
   // State-level coordinates (approximate centers)
   const stateCoordinates: Record<string, [number, number]> = {
@@ -121,23 +122,36 @@ export function CoverageMapView({
       return hasValidState;
     });
 
-    // Group by state and aggregate
+    // Group by state and collect unique investor IDs
     const stateData = validCoverage.reduce((acc, dma) => {
       if (!acc[dma.state]) {
         acc[dma.state] = {
-          totalInvestors: 0,
+          investorIdSet: new Set<string>(),
           dmas: [],
         };
       }
-      acc[dma.state].totalInvestors += dma.investor_count;
+      // Add all investor IDs from this DMA to the state's set
+      dma.investor_ids.forEach(id => acc[dma.state].investorIdSet.add(id));
       acc[dma.state].dmas.push(dma);
+      return acc;
+    }, {} as Record<string, { investorIdSet: Set<string>; dmas: DmaCoverageData[] }>);
+
+    // Convert Set size to totalInvestors count
+    const stateDataWithCounts = Object.entries(stateData).reduce((acc, [state, data]) => {
+      acc[state] = {
+        totalInvestors: data.investorIdSet.size,
+        dmas: data.dmas,
+      };
       return acc;
     }, {} as Record<string, { totalInvestors: number; dmas: DmaCoverageData[] }>);
 
     // Build GeoJSON features for state aggregates and render via Mapbox layers (more accurate than DOM markers)
-    stateDataRef.current = stateData;
+    stateDataRef.current = stateDataWithCounts;
 
-    const features = Object.entries(stateData)
+    const nationalCount = nationalCoverageData?.count || 0;
+
+    // Features for states with DMA-specific coverage
+    const dmaSpecificFeatures = Object.entries(stateDataWithCounts)
       .map(([state, data]) => {
         const coords = stateCoordinates[state];
         if (!coords) {
@@ -160,9 +174,21 @@ export function CoverageMapView({
       })
       .filter(Boolean) as any[];
 
+    // Add features for states with ONLY national coverage (no DMA-specific investors)
+    const allStateFeatures = Object.keys(stateCoordinates)
+      .filter(state => !stateDataWithCounts[state]) // States not in DMA coverage
+      .map(state => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: stateCoordinates[state] },
+        properties: {
+          state,
+          totalInvestors: nationalCount, // Just the national investors
+        },
+      }));
+
     const featureCollection = {
       type: 'FeatureCollection',
-      features,
+      features: [...dmaSpecificFeatures, ...allStateFeatures],
     } as const;
 
     const mapInstance = map.current!;
@@ -292,7 +318,7 @@ export function CoverageMapView({
     return () => {
       window.removeEventListener('dma-click', handleDmaClick);
     };
-  }, [coverage, mapLoaded, onDmaClick]);
+  }, [coverage, mapLoaded, onDmaClick, nationalCoverageData]);
 
   // Effect to show hover tooltip with investor details
   useEffect(() => {

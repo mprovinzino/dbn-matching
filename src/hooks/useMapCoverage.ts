@@ -152,3 +152,20 @@ export function useInvestorsByState(state: string | null) {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
+
+export function useNationalCoverageCount() {
+  return useQuery({
+    queryKey: ['national-coverage-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('investors')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .eq('coverage_type', 'national');
+      
+      if (error) throw error;
+      return { count: count || 0 };
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
