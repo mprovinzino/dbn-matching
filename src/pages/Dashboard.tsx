@@ -12,11 +12,8 @@ import { AddInvestorForm } from "@/components/AddInvestorForm";
 import { EditInvestorForm } from "@/components/EditInvestorForm";
 import { LeadMatchingSearch } from "@/components/LeadMatchingSearch";
 import { QuickAddFromSheet } from "@/components/QuickAddFromSheet";
-import { DmaImportButton } from "@/components/DmaImportButton";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { loadFullDmaData } from "@/utils/loadFullDmaData";
-import { Database } from "lucide-react";
 
 const Dashboard = () => {
   const [investors, setInvestors] = useState<any[]>([]);
@@ -332,22 +329,6 @@ const Dashboard = () => {
             <MapPin className="h-4 w-4 mr-2" />
             Coverage Map
           </Button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              setLoading(true);
-              try {
-                await loadFullDmaData();
-              } finally {
-                setLoading(false);
-              }
-            }}
-            disabled={loading}
-          >
-            <Database className="h-4 w-4 mr-2" />
-            Load All DMAs
-          </Button>
-          <DmaImportButton />
           <Button onClick={() => setQuickAddOpen(true)} variant="secondary">
             Quick Add from Sheet
           </Button>
