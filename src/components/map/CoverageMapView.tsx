@@ -274,7 +274,27 @@ export function CoverageMapView({
         if (!state || !coords) return;
 
         const data = stateDataRef.current[state];
-        if (!data) return;
+        const nationalCount = nationalCoverageData?.count || 0;
+
+        // For national-only states, show a simplified popup
+        if (!data) {
+          const html = `
+            <div style="padding: 8px;">
+              <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
+              <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                ${nationalCount} national investor${nationalCount !== 1 ? 's' : ''} cover this state
+              </p>
+              <p style="font-size: 11px; color: #888;">
+                No DMA-specific coverage in this state.
+              </p>
+            </div>
+          `;
+          new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: true })
+            .setLngLat(coords)
+            .setHTML(html)
+            .addTo(mapInstance);
+          return;
+        }
 
         const html = `
           <div style="padding: 8px;">
@@ -325,7 +345,6 @@ export function CoverageMapView({
     if (!map.current || !hoveredState || !investorDetails) return;
 
     const stateData = stateDataRef.current[hoveredState];
-    if (!stateData) return;
 
     const coordinates = stateCoordinates[hoveredState];
     if (!coordinates) return;
@@ -371,9 +390,9 @@ export function CoverageMapView({
           </div>
         ` : ''}
         
-        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #666;">
-          Click for DMA breakdown
-        </div>
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #666;">
+                ${dmaSpecific.length > 0 ? 'Click for DMA breakdown' : 'Click for more details'}
+              </div>
       </div>
     `;
 
