@@ -285,121 +285,235 @@ export function CoverageMapView({
         }
       });
       // Click for detailed DMA breakdown (on circles)
-      mapInstance.on('click', circleLayerId, (e) => {
+      mapInstance.on('click', circleLayerId, async (e) => {
         const feature = e.features?.[0];
         const state = feature && (feature.properties as any)?.state;
         const coords = feature && (feature.geometry as any)?.coordinates as [number, number] | undefined;
         if (!state || !coords) return;
 
-        const data = stateDataRef.current[state];
-        const nationalCount = nationalCoverageData?.count || 0;
+        // Show loading popup
+        const loadingPopup = new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: true, maxWidth: '350px' })
+          .setLngLat(coords)
+          .setHTML('<div style="padding: 12px;">Loading investor details...</div>')
+          .addTo(mapInstance);
 
-        // For national-only states, show a simplified popup
-        if (!data) {
+        try {
+          // Fetch investor details for this state
+          const { data: investorData } = await (async () => {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/get_investors_by_state?state=${state}`,
+              {
+                headers: {
+                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                },
+              }
+            );
+            return { data: await response.json() };
+          })();
+
+          if (!investorData) {
+            loadingPopup.remove();
+            return;
+          }
+
+          // Separate national and DMA-specific investors
+          const national = investorData.filter((inv: any) => inv.market_type === 'full_coverage');
+          const dmaSpecific = investorData.filter((inv: any) => inv.market_type !== 'full_coverage');
+
+          // Group DMA-specific by DMA name
+          const dmaGroups = dmaSpecific.reduce((acc: any, inv: any) => {
+            // Get DMA name from the stateDataRef
+            const stateData = stateDataRef.current[state];
+            if (stateData) {
+              stateData.dmas.forEach(dma => {
+                if (dma.investor_ids.includes(inv.investor_id)) {
+                  if (!acc[dma.dma]) acc[dma.dma] = [];
+                  if (!acc[dma.dma].find((i: any) => i.investor_id === inv.investor_id)) {
+                    acc[dma.dma].push(inv);
+                  }
+                }
+              });
+            }
+            return acc;
+          }, {});
+
+          const totalCount = national.length + dmaSpecific.length;
+
           const html = `
-            <div style="padding: 8px;">
-              <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
-              <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
-                ${nationalCount} national investor${nationalCount !== 1 ? 's' : ''} cover this state
+            <div style="padding: 12px; max-width: 350px;">
+              <h3 style="font-weight: bold; font-size: 14px; margin-bottom: 8px;">${state}</h3>
+              <p style="font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">
+                ${totalCount} total investor${totalCount !== 1 ? 's' : ''}
               </p>
-              <p style="font-size: 11px; color: #888;">
-                No DMA-specific coverage in this state.
-              </p>
+              
+              ${national.length > 0 ? `
+                <div style="margin-bottom: 12px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #2563eb; margin-bottom: 6px;">
+                    NATIONAL COVERAGE (${national.length}):
+                  </div>
+                  <div style="max-height: 120px; overflow-y: auto;">
+                    ${national.map((inv: any) => `
+                      <div style="font-size: 11px; padding: 3px 0; color: #374151;">
+                        • ${inv.company_name}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${Object.keys(dmaGroups).length > 0 ? `
+                <div>
+                  <div style="font-size: 12px; font-weight: 600; color: #059669; margin-bottom: 6px;">
+                    DMA-SPECIFIC COVERAGE:
+                  </div>
+                  <div style="max-height: 200px; overflow-y: auto;">
+                    ${Object.entries(dmaGroups)
+                      .sort(([, a]: any, [, b]: any) => b.length - a.length)
+                      .map(([dma, investors]: any) => `
+                        <div style="margin-bottom: 8px; padding: 6px; background: #f3f4f6; border-radius: 4px; cursor: pointer;"
+                             onclick="window.dispatchEvent(new CustomEvent('dma-click', { detail: '${dma}' }))">
+                          <strong style="font-size: 11px;">${dma}</strong>: ${investors.length} investor${investors.length !== 1 ? 's' : ''}
+                          <div style="margin-top: 4px; padding-left: 8px;">
+                            ${investors.map((inv: any) => `
+                              <div style="font-size: 10px; color: #6b7280;">• ${inv.company_name}</div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${national.length === 0 && Object.keys(dmaGroups).length === 0 ? `
+                <p style="font-size: 11px; color: #888;">
+                  No investor coverage data available for this state.
+                </p>
+              ` : ''}
             </div>
           `;
-          new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: true })
-            .setLngLat(coords)
-            .setHTML(html)
-            .addTo(mapInstance);
-          return;
+
+          loadingPopup.setHTML(html);
+        } catch (error) {
+          console.error('Error fetching investor details:', error);
+          loadingPopup.setHTML('<div style="padding: 12px; color: #ef4444;">Error loading investor details</div>');
         }
-
-        const total = data.totalInvestors + nationalCount;
-        const html = `
-          <div style="padding: 8px;">
-            <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
-            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
-              ${total} total investor${total !== 1 ? 's' : ''}
-            </p>
-            <div style="max-height: 200px; overflow-y: auto;">
-              ${data.dmas
-                .sort((a, b) => b.investor_count - a.investor_count)
-                .slice(0, 5)
-                .map((dma) => `
-                  <div style="font-size: 11px; margin-bottom: 4px; padding: 4px; background: #f3f4f6; border-radius: 4px; cursor: pointer;"
-                       onclick="window.dispatchEvent(new CustomEvent('dma-click', { detail: '${dma.dma}' }))">
-                    <strong>${dma.dma}</strong>: ${dma.investor_count} investor${dma.investor_count !== 1 ? 's' : ''}
-                  </div>
-                `)
-                .join('')}
-              ${data.dmas.length > 5 ? `<p style="font-size: 11px; color: #666; margin-top: 4px;">+${data.dmas.length - 5} more DMAs</p>` : ''}
-            </div>
-          </div>
-        `;
-
-        new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: true, maxWidth: '300px' })
-          .setLngLat(coords)
-          .setHTML(html)
-          .addTo(mapInstance);
       });
 
       // Click for detailed DMA breakdown (on labels)
-      mapInstance.on('click', labelLayerId, (e) => {
+      mapInstance.on('click', labelLayerId, async (e) => {
         const feature = e.features?.[0];
         const state = feature && (feature.properties as any)?.state;
         const coords = feature && (feature.geometry as any)?.coordinates as [number, number] | undefined;
         if (!state || !coords) return;
 
-        const data = stateDataRef.current[state];
-        const nationalCount = nationalCoverageData?.count || 0;
+        // Show loading popup
+        const loadingPopup = new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: true, maxWidth: '350px' })
+          .setLngLat(coords)
+          .setHTML('<div style="padding: 12px;">Loading investor details...</div>')
+          .addTo(mapInstance);
 
-        // For national-only states, show a simplified popup
-        if (!data) {
+        try {
+          // Fetch investor details for this state
+          const { data: investorData } = await (async () => {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/get_investors_by_state?state=${state}`,
+              {
+                headers: {
+                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                },
+              }
+            );
+            return { data: await response.json() };
+          })();
+
+          if (!investorData) {
+            loadingPopup.remove();
+            return;
+          }
+
+          // Separate national and DMA-specific investors
+          const national = investorData.filter((inv: any) => inv.market_type === 'full_coverage');
+          const dmaSpecific = investorData.filter((inv: any) => inv.market_type !== 'full_coverage');
+
+          // Group DMA-specific by DMA name
+          const dmaGroups = dmaSpecific.reduce((acc: any, inv: any) => {
+            // Get DMA name from the stateDataRef
+            const stateData = stateDataRef.current[state];
+            if (stateData) {
+              stateData.dmas.forEach(dma => {
+                if (dma.investor_ids.includes(inv.investor_id)) {
+                  if (!acc[dma.dma]) acc[dma.dma] = [];
+                  if (!acc[dma.dma].find((i: any) => i.investor_id === inv.investor_id)) {
+                    acc[dma.dma].push(inv);
+                  }
+                }
+              });
+            }
+            return acc;
+          }, {});
+
+          const totalCount = national.length + dmaSpecific.length;
+
           const html = `
-            <div style="padding: 8px;">
-              <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
-              <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
-                ${nationalCount} national investor${nationalCount !== 1 ? 's' : ''} cover this state
+            <div style="padding: 12px; max-width: 350px;">
+              <h3 style="font-weight: bold; font-size: 14px; margin-bottom: 8px;">${state}</h3>
+              <p style="font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">
+                ${totalCount} total investor${totalCount !== 1 ? 's' : ''}
               </p>
-              <p style="font-size: 11px; color: #888;">
-                No DMA-specific coverage in this state.
-              </p>
+              
+              ${national.length > 0 ? `
+                <div style="margin-bottom: 12px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #2563eb; margin-bottom: 6px;">
+                    NATIONAL COVERAGE (${national.length}):
+                  </div>
+                  <div style="max-height: 120px; overflow-y: auto;">
+                    ${national.map((inv: any) => `
+                      <div style="font-size: 11px; padding: 3px 0; color: #374151;">
+                        • ${inv.company_name}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${Object.keys(dmaGroups).length > 0 ? `
+                <div>
+                  <div style="font-size: 12px; font-weight: 600; color: #059669; margin-bottom: 6px;">
+                    DMA-SPECIFIC COVERAGE:
+                  </div>
+                  <div style="max-height: 200px; overflow-y: auto;">
+                    ${Object.entries(dmaGroups)
+                      .sort(([, a]: any, [, b]: any) => b.length - a.length)
+                      .map(([dma, investors]: any) => `
+                        <div style="margin-bottom: 8px; padding: 6px; background: #f3f4f6; border-radius: 4px; cursor: pointer;"
+                             onclick="window.dispatchEvent(new CustomEvent('dma-click', { detail: '${dma}' }))">
+                          <strong style="font-size: 11px;">${dma}</strong>: ${investors.length} investor${investors.length !== 1 ? 's' : ''}
+                          <div style="margin-top: 4px; padding-left: 8px;">
+                            ${investors.map((inv: any) => `
+                              <div style="font-size: 10px; color: #6b7280;">• ${inv.company_name}</div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${national.length === 0 && Object.keys(dmaGroups).length === 0 ? `
+                <p style="font-size: 11px; color: #888;">
+                  No investor coverage data available for this state.
+                </p>
+              ` : ''}
             </div>
           `;
-          new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: true })
-            .setLngLat(coords)
-            .setHTML(html)
-            .addTo(mapInstance);
-          return;
+
+          loadingPopup.setHTML(html);
+        } catch (error) {
+          console.error('Error fetching investor details:', error);
+          loadingPopup.setHTML('<div style="padding: 12px; color: #ef4444;">Error loading investor details</div>');
         }
-
-        const total = data.totalInvestors + nationalCount;
-        const html = `
-          <div style="padding: 8px;">
-            <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
-            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
-              ${total} total investor${total !== 1 ? 's' : ''}
-            </p>
-            <div style="max-height: 200px; overflow-y: auto;">
-              ${data.dmas
-                .sort((a, b) => b.investor_count - a.investor_count)
-                .slice(0, 5)
-                .map((dma) => `
-                  <div style="font-size: 11px; margin-bottom: 4px; padding: 4px; background: #f3f4f6; border-radius: 4px; cursor: pointer;"
-                       onclick="window.dispatchEvent(new CustomEvent('dma-click', { detail: '${dma.dma}' }))">
-                    <strong>${dma.dma}</strong>: ${dma.investor_count} investor${dma.investor_count !== 1 ? 's' : ''}
-                  </div>
-                `)
-                .join('')}
-              ${data.dmas.length > 5 ? `<p style="font-size: 11px; color: #666; margin-top: 4px;">+${data.dmas.length - 5} more DMAs</p>` : ''}
-            </div>
-          </div>
-        `;
-
-        new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: true, maxWidth: '300px' })
-          .setLngLat(coords)
-          .setHTML(html)
-          .addTo(mapInstance);
       });
     } else {
       const source = mapInstance.getSource(sourceId) as mapboxgl.GeoJSONSource;
