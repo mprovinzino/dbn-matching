@@ -3,6 +3,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { DmaCoverageData, useInvestorsByState, useNationalCoverageCount } from "@/hooks/useMapCoverage";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CoverageMapViewProps {
   coverage: DmaCoverageData[];
@@ -299,20 +300,17 @@ export function CoverageMapView({
 
         try {
           // Fetch investor details for this state
-          const { data: investorData } = await (async () => {
-            const response = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/get_investors_by_state?state=${state}`,
-              {
-                headers: {
-                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                },
-              }
-            );
-            return { data: await response.json() };
-          })();
+          const { data: investorData, error: investorError } = await supabase
+            .rpc('get_investors_by_state', { state_code: state });
 
-          if (!investorData) {
+          if (investorError) {
+            console.error('Error fetching investor details:', investorError);
+            loadingPopup.setHTML('<div style="padding: 12px; color: #ef4444;">Error loading investor details</div>');
+            return;
+          }
+
+          if (!investorData || !Array.isArray(investorData)) {
+            console.error('Invalid investor data received');
             loadingPopup.remove();
             return;
           }
@@ -415,20 +413,17 @@ export function CoverageMapView({
 
         try {
           // Fetch investor details for this state
-          const { data: investorData } = await (async () => {
-            const response = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/get_investors_by_state?state=${state}`,
-              {
-                headers: {
-                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                },
-              }
-            );
-            return { data: await response.json() };
-          })();
+          const { data: investorData, error: investorError } = await supabase
+            .rpc('get_investors_by_state', { state_code: state });
 
-          if (!investorData) {
+          if (investorError) {
+            console.error('Error fetching investor details:', investorError);
+            loadingPopup.setHTML('<div style="padding: 12px; color: #ef4444;">Error loading investor details</div>');
+            return;
+          }
+
+          if (!investorData || !Array.isArray(investorData)) {
+            console.error('Invalid investor data received');
             loadingPopup.remove();
             return;
           }

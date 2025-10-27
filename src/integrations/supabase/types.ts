@@ -301,6 +301,17 @@ export type Database = {
           zip_count: number
         }[]
       }
+      get_investors_by_state: {
+        Args: { state_code: string }
+        Returns: {
+          company_name: string
+          coverage_type: string
+          dma: string
+          investor_id: string
+          market_type: string
+          tier: number
+        }[]
+      }
     }
     Enums: {
       coverage_type: "local" | "multi_state" | "state" | "national"
