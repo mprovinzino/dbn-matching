@@ -169,15 +169,22 @@ Deno.serve(async (req) => {
         longitude: null
       };
     });
+
+    // Deduplicate by zip_code to avoid ON CONFLICT affecting same row twice in a single statement
+    const uniqueMap = new Map<string, { zip_code: string; city: string; state: string; dma: string | null; latitude: number | null; longitude: number | null }>();
+    for (const r of records) {
+      uniqueMap.set(r.zip_code, r); // last write wins
+    }
+    const uniqueRecords = Array.from(uniqueMap.values());
     
-    console.log(`Prepared ${records.length} records for insertion`);
+    console.log(`Prepared ${records.length} records, ${uniqueRecords.length} unique by zip_code`);
     
     // Batch upsert in chunks of 1000 (handles duplicates gracefully)
     let imported = 0;
     const chunkSize = 1000;
     
-    for (let i = 0; i < records.length; i += chunkSize) {
-      const chunk = records.slice(i, i + chunkSize);
+    for (let i = 0; i < uniqueRecords.length; i += chunkSize) {
+      const chunk = uniqueRecords.slice(i, i + chunkSize);
       const { error: upsertError } = await supabaseAdmin
         .from('zip_code_reference')
         .upsert(chunk, { onConflict: 'zip_code' });
@@ -188,7 +195,7 @@ Deno.serve(async (req) => {
       }
       
       imported += chunk.length;
-      console.log(`Imported ${imported}/${records.length} records (${Math.round((imported / records.length) * 100)}%)`);
+      console.log(`Imported ${imported}/${uniqueRecords.length} records (${Math.round((imported / uniqueRecords.length) * 100)}%)`);
     }
     
     // Get unique DMA count
