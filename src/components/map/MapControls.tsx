@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Loader2 } from "lucide-react";
 
 interface MapControlsProps {
   searchQuery: string;
@@ -14,6 +14,7 @@ interface MapControlsProps {
   onMinInvestorsChange: (value: number) => void;
   totalDmas: number;
   totalInvestors: number;
+  isFetching: boolean;
 }
 
 export function MapControls({
@@ -25,6 +26,7 @@ export function MapControls({
   onMinInvestorsChange,
   totalDmas,
   totalInvestors,
+  isFetching,
 }: MapControlsProps) {
   return (
     <div className="w-80 border-r bg-sidebar-background p-4 space-y-6 overflow-y-auto">
@@ -74,6 +76,9 @@ export function MapControls({
           <div className="text-xs text-muted-foreground mt-1 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
             <span className="font-semibold text-blue-600 dark:text-blue-400">Filtered View:</span>{" "}
             Showing coverage for "{searchQuery}"
+            {isFetching && (
+              <Loader2 className="inline-block ml-2 h-3 w-3 animate-spin" />
+            )}
           </div>
         )}
       </div>

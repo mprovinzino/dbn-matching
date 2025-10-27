@@ -34,12 +34,23 @@ export function useMapCoverage(filters: MapFilters) {
         const searchLower = filters.searchQuery.toLowerCase().trim();
         
         // Search for matching investors by company name
-        const { data: investors } = await supabase
+        const { data: investors, error: investorError } = await supabase
           .from('investors')
           .select('id, company_name')
           .ilike('company_name', `%${searchLower}%`);
         
-        const matchingInvestorIds = new Set(investors?.map(inv => inv.id) || []);
+        if (investorError) {
+          console.error('Error searching investors:', investorError);
+        }
+        
+        // Convert to Set of string UUIDs for comparison
+        const matchingInvestorIds = new Set(
+          investors?.map(inv => inv.id.toString()) || []
+        );
+        
+        console.log('🔍 Search:', searchLower);
+        console.log('📊 Found investors:', investors?.length || 0);
+        console.log('🎯 Matching IDs:', Array.from(matchingInvestorIds));
         
         // Filter DMAs: show if DMA name matches OR if any matching investor covers it
         filtered = filtered.filter(dma => {
@@ -48,11 +59,19 @@ export function useMapCoverage(filters: MapFilters) {
           
           // Check if any investor covering this DMA matches search
           const hasMatchingInvestor = dma.investor_ids.some(id => 
-            matchingInvestorIds.has(id)
+            matchingInvestorIds.has(id.toString())
           );
           
-          return dmaNameMatches || hasMatchingInvestor;
+          const matches = dmaNameMatches || hasMatchingInvestor;
+          
+          if (matches && hasMatchingInvestor) {
+            console.log(`✅ DMA "${dma.dma}" matches investor search`);
+          }
+          
+          return matches;
         });
+        
+        console.log('📍 Filtered DMAs:', filtered.length);
       }
       
       // Apply market type filter

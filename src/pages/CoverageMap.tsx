@@ -30,7 +30,7 @@ export default function CoverageMap() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const { data: coverage, isLoading, error } = useMapCoverage({
+  const { data: coverage, isLoading, isFetching, error } = useMapCoverage({
     marketType,
     minInvestors,
     searchQuery: debouncedSearch,
@@ -47,7 +47,7 @@ export default function CoverageMap() {
     loadInvestorCount();
   }, []);
 
-  if (isLoading) {
+  if (isLoading && !coverage) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="text-center">
@@ -104,11 +104,12 @@ export default function CoverageMap() {
           onMinInvestorsChange={setMinInvestors}
           totalDmas={coverage?.length || 0}
           totalInvestors={totalInvestors}
+          isFetching={isFetching}
         />
 
         <CoverageMapView
           coverage={coverage || []}
-          searchQuery={searchQuery}
+          searchQuery={debouncedSearch}
           onDmaClick={setSelectedDma}
           highlightInvestorId={investorParam}
         />
