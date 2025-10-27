@@ -141,6 +141,8 @@ export function CoverageMapView({
       el.style.fontWeight = "bold";
       el.style.fontSize = "14px";
       el.style.transition = "all 0.2s";
+      el.style.position = "relative";
+      el.style.transformOrigin = "center center";
       el.textContent = data.totalInvestors.toString();
 
       el.addEventListener("mouseenter", () => {
@@ -153,10 +155,15 @@ export function CoverageMapView({
         el.style.opacity = "0.7";
       });
 
-      const marker = new mapboxgl.Marker(el)
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
         .setLngLat(coords)
         .setPopup(
-          new mapboxgl.Popup({ offset: 25 }).setHTML(`
+          new mapboxgl.Popup({ 
+            offset: 25,
+            closeButton: false,
+            closeOnClick: true,
+            maxWidth: '300px'
+          }).setHTML(`
             <div style="padding: 8px;">
               <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
               <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
