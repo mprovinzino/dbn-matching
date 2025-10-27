@@ -107,8 +107,17 @@ export function CoverageMapView({
     markers.current.forEach((marker) => marker.remove());
     markers.current = [];
 
+    // Filter out invalid state codes (like "XX" for multi-state DMAs)
+    const validCoverage = coverage.filter(dma => {
+      const hasValidState = dma.state && dma.state !== 'XX' && stateCoordinates[dma.state];
+      if (!hasValidState) {
+        console.warn(`⚠️ Skipping DMA "${dma.dma}" with invalid state code: "${dma.state}"`);
+      }
+      return hasValidState;
+    });
+
     // Group by state and aggregate
-    const stateData = coverage.reduce((acc, dma) => {
+    const stateData = validCoverage.reduce((acc, dma) => {
       if (!acc[dma.state]) {
         acc[dma.state] = {
           totalInvestors: 0,
@@ -123,7 +132,19 @@ export function CoverageMapView({
     // Create markers for each state
     Object.entries(stateData).forEach(([state, data]) => {
       const coords = stateCoordinates[state];
-      if (!coords) return;
+      if (!coords) {
+        console.warn(`⚠️ No coordinates found for state: ${state}`);
+        return;
+      }
+
+      // Validate coordinates are within US bounds
+      const [lng, lat] = coords;
+      if (lng < -125 || lng > -65 || lat < 25 || lat > 50) {
+        console.warn(`⚠️ Coordinates out of US bounds for ${state}: [${lng}, ${lat}]`);
+        return;
+      }
+
+      console.log(`✅ Creating marker for ${state} at [${lng}, ${lat}] with ${data.totalInvestors} investors`);
 
       const el = document.createElement("div");
       el.className = "coverage-marker";
