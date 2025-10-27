@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { DmaCoverageData } from "@/hooks/useMapCoverage";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface CoverageMapViewProps {
   coverage: DmaCoverageData[];
@@ -202,20 +202,7 @@ export function CoverageMapView({
       <div className="flex-1 flex items-center justify-center bg-muted/30">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Initializing map...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (mapLoaded && coverage.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-muted/30">
-        <div className="text-center">
-          <MapPin className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            No coverage areas to display
-          </p>
+          <p className="text-sm text-muted-foreground">Loading map...</p>
         </div>
       </div>
     );
