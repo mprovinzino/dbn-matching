@@ -5,8 +5,9 @@ import { CoverageMapView } from "@/components/map/CoverageMapView";
 import { DmaInfoPanel } from "@/components/map/DmaInfoPanel";
 import { useMapCoverage } from "@/hooks/useMapCoverage";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function CoverageMap() {
   const [searchParams] = useSearchParams();
@@ -19,7 +20,7 @@ export default function CoverageMap() {
   const [selectedDma, setSelectedDma] = useState<string | null>(null);
   const [totalInvestors, setTotalInvestors] = useState(0);
 
-  const { data: coverage, isLoading } = useMapCoverage({
+  const { data: coverage, isLoading, error } = useMapCoverage({
     marketType,
     minInvestors,
     searchQuery,
@@ -43,6 +44,20 @@ export default function CoverageMap() {
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
           <p className="text-muted-foreground">Loading coverage map...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center p-4">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Coverage Data Error</AlertTitle>
+          <AlertDescription>
+            Failed to load coverage data. Please try refreshing the page.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
