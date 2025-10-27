@@ -168,7 +168,7 @@ export function CoverageMapView({
           geometry: { type: 'Point', coordinates: coords },
           properties: {
             state,
-            totalInvestors: data.totalInvestors,
+            totalInvestors: data.totalInvestors + nationalCount,
           },
         } as const;
       })
@@ -247,7 +247,7 @@ export function CoverageMapView({
         },
       });
 
-      // Interactions - hover to preview investors
+      // Interactions - hover to preview investors (on circles)
       mapInstance.on('mouseenter', circleLayerId, (e) => {
         mapInstance.getCanvas().style.cursor = 'pointer';
         const feature = e.features?.[0];
@@ -265,8 +265,26 @@ export function CoverageMapView({
           hoverPopupRef.current = null;
         }
       });
+
+      // Interactions - hover to preview investors (on labels)
+      mapInstance.on('mouseenter', labelLayerId, (e) => {
+        mapInstance.getCanvas().style.cursor = 'pointer';
+        const feature = e.features?.[0];
+        const state = feature && (feature.properties as any)?.state;
+        if (state) {
+          setHoveredState(state);
+        }
+      });
       
-      // Click for detailed DMA breakdown
+      mapInstance.on('mouseleave', labelLayerId, () => {
+        mapInstance.getCanvas().style.cursor = '';
+        setHoveredState(null);
+        if (hoverPopupRef.current) {
+          hoverPopupRef.current.remove();
+          hoverPopupRef.current = null;
+        }
+      });
+      // Click for detailed DMA breakdown (on circles)
       mapInstance.on('click', circleLayerId, (e) => {
         const feature = e.features?.[0];
         const state = feature && (feature.properties as any)?.state;
@@ -296,11 +314,71 @@ export function CoverageMapView({
           return;
         }
 
+        const total = data.totalInvestors + nationalCount;
         const html = `
           <div style="padding: 8px;">
             <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
             <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
-              ${data.totalInvestors} total investor${data.totalInvestors !== 1 ? 's' : ''}
+              ${total} total investor${total !== 1 ? 's' : ''}
+            </p>
+            <div style="max-height: 200px; overflow-y: auto;">
+              ${data.dmas
+                .sort((a, b) => b.investor_count - a.investor_count)
+                .slice(0, 5)
+                .map((dma) => `
+                  <div style="font-size: 11px; margin-bottom: 4px; padding: 4px; background: #f3f4f6; border-radius: 4px; cursor: pointer;"
+                       onclick="window.dispatchEvent(new CustomEvent('dma-click', { detail: '${dma.dma}' }))">
+                    <strong>${dma.dma}</strong>: ${dma.investor_count} investor${dma.investor_count !== 1 ? 's' : ''}
+                  </div>
+                `)
+                .join('')}
+              ${data.dmas.length > 5 ? `<p style="font-size: 11px; color: #666; margin-top: 4px;">+${data.dmas.length - 5} more DMAs</p>` : ''}
+            </div>
+          </div>
+        `;
+
+        new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: true, maxWidth: '300px' })
+          .setLngLat(coords)
+          .setHTML(html)
+          .addTo(mapInstance);
+      });
+
+      // Click for detailed DMA breakdown (on labels)
+      mapInstance.on('click', labelLayerId, (e) => {
+        const feature = e.features?.[0];
+        const state = feature && (feature.properties as any)?.state;
+        const coords = feature && (feature.geometry as any)?.coordinates as [number, number] | undefined;
+        if (!state || !coords) return;
+
+        const data = stateDataRef.current[state];
+        const nationalCount = nationalCoverageData?.count || 0;
+
+        // For national-only states, show a simplified popup
+        if (!data) {
+          const html = `
+            <div style="padding: 8px;">
+              <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
+              <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                ${nationalCount} national investor${nationalCount !== 1 ? 's' : ''} cover this state
+              </p>
+              <p style="font-size: 11px; color: #888;">
+                No DMA-specific coverage in this state.
+              </p>
+            </div>
+          `;
+          new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: true })
+            .setLngLat(coords)
+            .setHTML(html)
+            .addTo(mapInstance);
+          return;
+        }
+
+        const total = data.totalInvestors + nationalCount;
+        const html = `
+          <div style="padding: 8px;">
+            <h3 style="font-weight: bold; margin-bottom: 4px;">${state}</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
+              ${total} total investor${total !== 1 ? 's' : ''}
             </p>
             <div style="max-height: 200px; overflow-y: auto;">
               ${data.dmas
