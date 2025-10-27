@@ -172,19 +172,19 @@ Deno.serve(async (req) => {
     
     console.log(`Prepared ${records.length} records for insertion`);
     
-    // Batch insert in chunks of 1000
+    // Batch upsert in chunks of 1000 (handles duplicates gracefully)
     let imported = 0;
     const chunkSize = 1000;
     
     for (let i = 0; i < records.length; i += chunkSize) {
       const chunk = records.slice(i, i + chunkSize);
-      const { error: insertError } = await supabaseAdmin
+      const { error: upsertError } = await supabaseAdmin
         .from('zip_code_reference')
-        .insert(chunk);
+        .upsert(chunk, { onConflict: 'zip_code' });
       
-      if (insertError) {
-        console.error(`Error inserting chunk ${i / chunkSize + 1}:`, insertError);
-        throw insertError;
+      if (upsertError) {
+        console.error(`Error upserting chunk ${i / chunkSize + 1}:`, upsertError);
+        throw upsertError;
       }
       
       imported += chunk.length;
