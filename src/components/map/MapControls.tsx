@@ -138,6 +138,10 @@ export function MapControls({
         <Label>Coverage Intensity</Label>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-green-500 border-2 border-white" />
+            <span className="text-xs">State-Level Coverage</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-gray-300" />
             <span className="text-xs">0 investors</span>
           </div>

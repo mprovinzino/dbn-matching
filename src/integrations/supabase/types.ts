@@ -312,6 +312,16 @@ export type Database = {
           tier: number
         }[]
       }
+      get_state_level_coverage: {
+        Args: never
+        Returns: {
+          investor_id: string
+          investor_name: string
+          market_type: string
+          state: string
+          tier: number
+        }[]
+      }
     }
     Enums: {
       coverage_type: "local" | "multi_state" | "state" | "national"

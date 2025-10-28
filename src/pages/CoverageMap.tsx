@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapControls } from "@/components/map/MapControls";
 import { CoverageMapView } from "@/components/map/CoverageMapView";
 import { DmaInfoPanel } from "@/components/map/DmaInfoPanel";
-import { useMapCoverage } from "@/hooks/useMapCoverage";
+import { useMapCoverage, useStateLevelCoverage } from "@/hooks/useMapCoverage";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,8 @@ export default function CoverageMap() {
     searchQuery: debouncedSearch,
   });
 
+  const { data: stateLevelCoverage, isLoading: isLoadingStates } = useStateLevelCoverage(debouncedSearch);
+
   // Load total investor count
   useEffect(() => {
     const loadInvestorCount = async () => {
@@ -47,7 +49,7 @@ export default function CoverageMap() {
     loadInvestorCount();
   }, []);
 
-  if (isLoading && !coverage) {
+  if ((isLoading && !coverage) || (isLoadingStates && !stateLevelCoverage)) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="text-center">
@@ -109,6 +111,7 @@ export default function CoverageMap() {
 
         <CoverageMapView
           coverage={coverage || []}
+          stateLevelCoverage={stateLevelCoverage || []}
           searchQuery={debouncedSearch}
           onDmaClick={setSelectedDma}
           highlightInvestorId={investorParam}

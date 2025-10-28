@@ -236,3 +236,38 @@ export function useNationalCoverageCount() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
+
+export interface StateLevelCoverageData {
+  state: string;
+  investor_id: string;
+  investor_name: string;
+  market_type: string;
+  tier: number;
+}
+
+export function useStateLevelCoverage(searchQuery?: string) {
+  return useQuery({
+    queryKey: ['state-level-coverage', searchQuery],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_state_level_coverage');
+      
+      if (error) throw error;
+      
+      let filtered = data as StateLevelCoverageData[];
+      
+      // Filter by investor name if searching
+      if (searchQuery?.trim()) {
+        const searchLower = searchQuery.toLowerCase().trim();
+        filtered = filtered.filter(item => 
+          item.investor_name.toLowerCase().includes(searchLower)
+        );
+        
+        console.log('🟢 State-level coverage filtered:', filtered.length, 'states');
+      }
+      
+      return filtered;
+    },
+    staleTime: 1000 * 60 * 5,
+    placeholderData: (prev) => prev,
+  });
+}
