@@ -46,9 +46,9 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
     lead_types: [] as string[],
     buy_box_notes: "",
     // Markets
-    primary_states: [] as string[],
+    full_coverage_states: "",
+    direct_purchase_markets: "",
     primary_zip_codes: "",
-    secondary_states: [] as string[],
     secondary_zip_codes: "",
   });
 
@@ -122,22 +122,84 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
       });
 
       // Insert markets
-      if (formData.primary_states.length > 0 || formData.primary_zip_codes) {
-        await supabase.from('markets').insert({
-          investor_id: investor.id,
-          market_type: 'primary',
-          states: formData.primary_states,
-          zip_codes: formData.primary_zip_codes.split(',').map(z => z.trim()).filter(Boolean),
-        });
+      const marketInserts = [];
+
+      // Full coverage states
+      if (formData.full_coverage_states) {
+        const states = formData.full_coverage_states
+          .split(/[,\s]+/)
+          .map(s => s.trim().toUpperCase())
+          .filter(Boolean)
+          .filter(s => /^[A-Z]{2}$/.test(s));
+        
+        if (states.length > 0) {
+          marketInserts.push({
+            investor_id: investor.id,
+            market_type: 'full_coverage',
+            states,
+            zip_codes: [],
+          });
+        }
       }
 
-      if (formData.secondary_states.length > 0 || formData.secondary_zip_codes) {
-        await supabase.from('markets').insert({
-          investor_id: investor.id,
-          market_type: 'secondary',
-          states: formData.secondary_states,
-          zip_codes: formData.secondary_zip_codes.split(',').map(z => z.trim()).filter(Boolean),
-        });
+      // Direct purchase markets
+      if (formData.direct_purchase_markets) {
+        const items = formData.direct_purchase_markets
+          .split(/[,\s]+/)
+          .map(s => s.trim().toUpperCase())
+          .filter(Boolean);
+        
+        const states = items.filter(item => /^[A-Z]{2}$/.test(item));
+        const zips = items.filter(item => /^\d{5}$/.test(item));
+        
+        if (states.length > 0 || zips.length > 0) {
+          marketInserts.push({
+            investor_id: investor.id,
+            market_type: 'direct_purchase',
+            states,
+            zip_codes: zips,
+          });
+        }
+      }
+
+      // Primary markets
+      if (formData.primary_zip_codes) {
+        const zips = formData.primary_zip_codes
+          .split(/[,\s\n]+/)
+          .map(z => z.trim())
+          .filter(Boolean)
+          .filter(z => /^\d{5}$/.test(z));
+        
+        if (zips.length > 0) {
+          marketInserts.push({
+            investor_id: investor.id,
+            market_type: 'primary',
+            states: [],
+            zip_codes: zips,
+          });
+        }
+      }
+
+      // Secondary markets
+      if (formData.secondary_zip_codes) {
+        const zips = formData.secondary_zip_codes
+          .split(/[,\s\n]+/)
+          .map(z => z.trim())
+          .filter(Boolean)
+          .filter(z => /^\d{5}$/.test(z));
+        
+        if (zips.length > 0) {
+          marketInserts.push({
+            investor_id: investor.id,
+            market_type: 'secondary',
+            states: [],
+            zip_codes: zips,
+          });
+        }
+      }
+
+      if (marketInserts.length > 0) {
+        await supabase.from('markets').insert(marketInserts);
       }
 
       toast({
@@ -302,43 +364,56 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
 
   const renderStep3 = () => (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="primary_states">Primary Markets - States (comma-separated)</Label>
+      <div className="space-y-2">
+        <Label htmlFor="full_coverage_states">Full Coverage States (for national/multi-state investors)</Label>
         <Input
-          id="primary_states"
-          placeholder="e.g., TX, FL, CA"
-          value={formData.primary_states.join(', ')}
-          onChange={(e) => updateField('primary_states', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+          id="full_coverage_states"
+          placeholder="e.g., TX FL CA NY"
+          value={formData.full_coverage_states}
+          onChange={(e) => updateField('full_coverage_states', e.target.value)}
         />
+        <p className="text-xs text-muted-foreground">
+          Two-letter state codes, comma or space separated. Investor covers ALL zip codes in these states.
+        </p>
       </div>
-      <div>
-        <Label htmlFor="primary_zips">Primary Markets - Zip Codes (comma-separated)</Label>
+      <div className="space-y-2">
+        <Label htmlFor="direct_purchase_markets">Direct Purchase Markets (states or zips)</Label>
+        <Textarea
+          id="direct_purchase_markets"
+          placeholder="e.g., GA 30301 30302 or just GA"
+          value={formData.direct_purchase_markets}
+          onChange={(e) => updateField('direct_purchase_markets', e.target.value)}
+          rows={2}
+        />
+        <p className="text-xs text-muted-foreground">
+          Mix of 2-letter state codes and 5-digit zip codes, comma or space separated.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="primary_zips">Primary Markets - Zip Codes</Label>
         <Textarea
           id="primary_zips"
-          placeholder="e.g., 78701, 78702, 78703"
+          placeholder="e.g., 78701 78702 78703"
           value={formData.primary_zip_codes}
           onChange={(e) => updateField('primary_zip_codes', e.target.value)}
           rows={3}
         />
+        <p className="text-xs text-muted-foreground">
+          5-digit zip codes only, comma/space/newline separated.
+        </p>
       </div>
-      <div>
-        <Label htmlFor="secondary_states">Secondary Markets - States</Label>
-        <Input
-          id="secondary_states"
-          placeholder="e.g., NY, NJ, PA"
-          value={formData.secondary_states.join(', ')}
-          onChange={(e) => updateField('secondary_states', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-        />
-      </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="secondary_zips">Secondary Markets - Zip Codes</Label>
         <Textarea
           id="secondary_zips"
-          placeholder="e.g., 10001, 10002"
+          placeholder="e.g., 10001 10002"
           value={formData.secondary_zip_codes}
           onChange={(e) => updateField('secondary_zip_codes', e.target.value)}
           rows={3}
         />
+        <p className="text-xs text-muted-foreground">
+          5-digit zip codes only, comma/space/newline separated.
+        </p>
       </div>
       <div>
         <Label htmlFor="buy_box_notes">Additional Notes</Label>
