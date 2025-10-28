@@ -288,6 +288,13 @@ export type Database = {
           total_zip_codes: number
         }[]
       }
+      get_investor_ids_by_name: {
+        Args: { search_text: string }
+        Returns: {
+          company_name: string
+          id: string
+        }[]
+      }
       get_investors_by_dma: {
         Args: { dma_name: string }
         Returns: {
