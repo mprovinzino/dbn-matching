@@ -163,7 +163,7 @@ export function CoverageMapView({
           return null;
         }
         const [lng, lat] = coords;
-        if (lng < -125 || lng > -65 || lat < 25 || lat > 50) {
+        if (lng < -170 || lng > -65 || lat < 18 || lat > 72) {
           console.warn(`⚠️ Coordinates out of US bounds for ${state}: [${lng}, ${lat}]`);
           return null;
         }
@@ -733,14 +733,58 @@ export function CoverageMapView({
   useEffect(() => {
     if (!map.current || !mapLoaded || !searchQuery || !coverage) return;
 
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
+
+    // 1) Try to match by DMA or state name directly
+    let targetState: string | null = null;
     const matchedDma = coverage.find(
       (dma) => dma.dma.toLowerCase().includes(query) || dma.state.toLowerCase().includes(query)
     );
+    if (matchedDma) {
+      targetState = matchedDma.state;
+    }
 
-    if (matchedDma && stateCoordinates[matchedDma.state]) {
+    // 2) If no DMA/state match, try to infer from investor search
+    if (!targetState) {
+      // When searching an investor, use the filtered coverage prop which already narrowed investor_ids
+      const investorDmas = coverage.filter((dma) => dma.investor_ids && dma.investor_ids.length > 0);
+      if (investorDmas.length > 0) {
+        // Prefer a DMA that already has a valid state mapping
+        const withValidState = investorDmas.find((d) => stateCoordinates[d.state]);
+        if (withValidState) {
+          targetState = withValidState.state;
+        } else {
+          // Last resort: look up the most common state for the first DMA via zip_code_reference
+          const firstDma = investorDmas[0];
+          (async () => {
+            try {
+              const { data, error } = await supabase
+                .from('zip_code_reference')
+                .select('state')
+                .eq('dma', firstDma.dma);
+              if (!error && data && data.length > 0) {
+                const counts = data.reduce<Record<string, number>>((acc, row: any) => {
+                  const s = row.state as string;
+                  acc[s] = (acc[s] || 0) + 1;
+                  return acc;
+                }, {});
+                const bestState = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+                if (stateCoordinates[bestState]) {
+                  map.current!.flyTo({ center: stateCoordinates[bestState], zoom: 6, duration: 1500 });
+                }
+              }
+            } catch (e) {
+              console.warn('Search fallback lookup failed', e);
+            }
+          })();
+          return; // Exit early; async fallback will handle flyTo
+        }
+      }
+    }
+
+    if (targetState && stateCoordinates[targetState]) {
       map.current.flyTo({
-        center: stateCoordinates[matchedDma.state],
+        center: stateCoordinates[targetState],
         zoom: 6,
         duration: 1500,
       });
