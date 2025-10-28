@@ -72,6 +72,22 @@ export function useMapCoverage(filters: MapFilters) {
         });
         
         console.log('📍 Filtered DMAs:', filtered.length);
+
+        // If searching for specific investor(s), narrow each DMA to only those investors
+        if (matchingInvestorIds.size > 0) {
+          filtered = filtered
+            .map(dma => {
+              const intersectIds = dma.investor_ids.filter(id => matchingInvestorIds.has(id.toString()));
+              return {
+                ...dma,
+                investor_ids: intersectIds,
+                investor_count: intersectIds.length,
+              } as DmaCoverageData;
+            })
+            .filter(dma => dma.investor_ids.length > 0);
+
+          console.log('🎯 Investor-specific DMAs:', filtered.length);
+        }
       }
       
       // Apply market type filter
@@ -91,6 +107,8 @@ export function useMapCoverage(filters: MapFilters) {
       return filtered;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    placeholderData: (prev) => prev,
+    refetchOnWindowFocus: false,
   });
 }
 

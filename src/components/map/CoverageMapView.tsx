@@ -149,7 +149,8 @@ export function CoverageMapView({
     // Build GeoJSON features for state aggregates and render via Mapbox layers (more accurate than DOM markers)
     stateDataRef.current = stateDataWithCounts;
 
-    const nationalCount = nationalCoverageData?.count || 0;
+    const includeNational = !searchQuery?.trim();
+    const nationalCount = includeNational ? (nationalCoverageData?.count || 0) : 0;
 
     // Features for states with DMA-specific coverage
     const dmaSpecificFeatures = Object.entries(stateDataWithCounts)
@@ -169,23 +170,25 @@ export function CoverageMapView({
           geometry: { type: 'Point', coordinates: coords },
           properties: {
             state,
-            totalInvestors: data.totalInvestors + nationalCount,
+            totalInvestors: data.totalInvestors + (includeNational ? nationalCount : 0),
           },
         } as const;
       })
       .filter(Boolean) as any[];
 
     // Add features for states with ONLY national coverage (no DMA-specific investors)
-    const allStateFeatures = Object.keys(stateCoordinates)
-      .filter(state => !stateDataWithCounts[state]) // States not in DMA coverage
-      .map(state => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: stateCoordinates[state] },
-        properties: {
-          state,
-          totalInvestors: nationalCount, // Just the national investors
-        },
-      }));
+    const allStateFeatures = includeNational
+      ? Object.keys(stateCoordinates)
+          .filter(state => !stateDataWithCounts[state]) // States not in DMA coverage
+          .map(state => ({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: stateCoordinates[state] },
+            properties: {
+              state,
+              totalInvestors: nationalCount, // Just the national investors
+            },
+          }))
+      : [];
 
     const featureCollection = {
       type: 'FeatureCollection',
@@ -525,7 +528,7 @@ export function CoverageMapView({
     return () => {
       window.removeEventListener('dma-click', handleDmaClick);
     };
-  }, [coverage, mapLoaded, onDmaClick, nationalCoverageData]);
+  }, [coverage, mapLoaded, onDmaClick, nationalCoverageData, searchQuery]);
 
   // Effect to show hover tooltip with investor details
   useEffect(() => {
