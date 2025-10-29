@@ -106,9 +106,9 @@ export function useMapCoverage(filters: MapFilters) {
       
       return filtered;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    placeholderData: (prev) => prev,
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 30, // 30 seconds - show updates faster
+    refetchOnWindowFocus: true, // Refetch when returning to map
+    refetchInterval: 1000 * 60, // Auto-refetch every minute
   });
 }
 
@@ -267,7 +267,8 @@ export function useStateLevelCoverage(searchQuery?: string) {
       
       return filtered;
     },
-    staleTime: 1000 * 60 * 5,
-    placeholderData: (prev) => prev,
+    staleTime: 1000 * 30, // 30 seconds - show updates faster
+    refetchOnWindowFocus: true, // Refetch when returning to map
+    refetchInterval: 1000 * 60, // Auto-refetch every minute
   });
 }
