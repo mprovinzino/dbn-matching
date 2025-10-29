@@ -113,6 +113,11 @@ export function CoverageMapView({
   useEffect(() => {
     if (!map.current || !mapLoaded || !coverage) return;
 
+    console.log('🗺️ CoverageMapView updating with:', {
+      coverageItems: coverage.length,
+      highlightInvestorId,
+    });
+
     // Clear existing markers
     markers.current.forEach((marker) => marker.remove());
     markers.current = [];
@@ -130,6 +135,11 @@ export function CoverageMapView({
     const filteredCoverage = highlightInvestorId
       ? validCoverage.filter(dma => dma.investor_ids.includes(highlightInvestorId))
       : validCoverage;
+
+    console.log('🎯 After filtering:', {
+      filteredCount: filteredCoverage.length,
+      uniqueStates: [...new Set(filteredCoverage.map(d => d.state))],
+    });
 
     // Group by state and collect unique investor IDs
     const stateData = filteredCoverage.reduce((acc, dma) => {
@@ -154,11 +164,22 @@ export function CoverageMapView({
       return acc;
     }, {} as Record<string, { totalInvestors: number; dmas: DmaCoverageData[] }>);
 
+    console.log('📊 State data aggregated:', {
+      states: Object.keys(stateDataWithCounts),
+      stateData: Object.entries(stateDataWithCounts).map(([state, data]) => ({
+        state,
+        investors: data.totalInvestors,
+        dmas: data.dmas.length,
+      })),
+    });
+
     // Build GeoJSON features for state aggregates and render via Mapbox layers (more accurate than DOM markers)
     stateDataRef.current = stateDataWithCounts;
 
     const includeNational = !searchQuery?.trim() && !highlightInvestorId;
     const nationalCount = includeNational ? (nationalCoverageData?.count || 0) : 0;
+
+    console.log('🌍 National coverage:', { includeNational, nationalCount });
 
     // Features for states with DMA-specific coverage
     const dmaSpecificFeatures = Object.entries(stateDataWithCounts)

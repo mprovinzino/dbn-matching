@@ -33,16 +33,23 @@ export function useMapCoverage(filters: MapFilters) {
       // If we have an exact investor ID, use that for precise filtering
       if (filters.investorId) {
         console.log('🎯 Exact investor ID filter:', filters.investorId);
+        console.log('📊 Total DMAs before filtering:', filtered.length);
         
+        const beforeFilter = filtered.length;
         filtered = filtered
-          .filter(dma => dma.investor_ids.some(id => id.toString() === filters.investorId))
+          .filter(dma => {
+            const matches = dma.investor_ids.some(id => id.toString() === filters.investorId);
+            return matches;
+          })
           .map(dma => ({
             ...dma,
             investor_ids: [filters.investorId],
             investor_count: 1,
           } as DmaCoverageData));
         
-        console.log('📍 Filtered to exact investor DMAs:', filtered.length);
+        console.log('📍 Filtered to exact investor DMAs:', filtered.length, 'from', beforeFilter);
+        console.log('📌 Unique states in filtered DMAs:', [...new Set(filtered.map(d => d.state))]);
+        console.log('📋 Filtered DMAs:', filtered.map(d => ({ dma: d.dma, state: d.state })));
       }
       // Otherwise, apply fuzzy search query filter (investor name or DMA name)
       else if (filters.searchQuery && filters.searchQuery.trim()) {
