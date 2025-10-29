@@ -16,38 +16,6 @@ interface CoverageInfoPanelProps {
 export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps) {
   const navigate = useNavigate();
 
-  // Fetch state-level overview
-  const { data: stateOverview, isLoading: isLoadingOverview } = useQuery({
-    queryKey: ['state-overview', stateCode],
-    queryFn: async () => {
-      const { data: investors, error } = await supabase
-        .from('investors')
-        .select(`
-          id,
-          company_name,
-          markets!inner(market_type, states)
-        `)
-        .contains('markets.states', [stateCode])
-        .eq('status', 'active');
-
-      if (error) throw error;
-
-      const national = investors?.filter(inv => 
-        inv.markets.some((m: any) => m.market_type === 'national')
-      ).length || 0;
-      
-      const stateLevel = investors?.filter(inv => 
-        inv.markets.some((m: any) => m.market_type === 'state_level')
-      ).length || 0;
-
-      return {
-        total: investors?.length || 0,
-        national,
-        stateLevel,
-      };
-    },
-  });
-
   // Fetch DMAs in this state
   const { data: dmaData, isLoading: isLoadingDmas } = useQuery({
     queryKey: ['state-dmas', stateCode],
@@ -74,12 +42,12 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
     },
   });
 
-  // Fetch detailed investor info for each DMA
-  const { data: dmaInvestors, isLoading: isLoadingInvestors } = useQuery({
+  // Fetch detailed investor info for each DMA and calculate state overview
+  const { data: dmaInvestorsData, isLoading: isLoadingInvestors } = useQuery({
     queryKey: ['dma-investors', stateCode, dmaData],
     enabled: !!dmaData && dmaData.length > 0,
     queryFn: async () => {
-      if (!dmaData) return {};
+      if (!dmaData) return { grouped: {}, overview: { total: 0, national: 0, stateLevel: 0 } };
 
       const dmaNames = dmaData.map((d: any) => d.dma);
       
@@ -113,34 +81,62 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
         dmaZipMap[z.dma].push(z.zip_code);
       });
 
-      // Group investors by DMA
+      // Group investors by DMA and track all unique investors in state
       const grouped: Record<string, any[]> = {};
+      const uniqueInvestorIds = new Set<string>();
+      const nationalInvestors = new Set<string>();
+      const stateLevelInvestors = new Set<string>();
       
       investors?.forEach((investor: any) => {
         const investorZips = investor.markets.flatMap((m: any) => m.zip_codes || []);
+        const marketType = investor.markets[0]?.market_type;
         
         dmaNames.forEach((dma: string) => {
           const dmaZips = dmaZipMap[dma] || [];
           const matchingZips = investorZips.filter((z: string) => dmaZips.includes(z));
           
           if (matchingZips.length > 0) {
+            uniqueInvestorIds.add(investor.id);
+            
+            if (marketType === 'full_coverage') {
+              nationalInvestors.add(investor.id);
+            } else {
+              stateLevelInvestors.add(investor.id);
+            }
+            
             if (!grouped[dma]) grouped[dma] = [];
             
-            // Check if already added
+            // Check if already added to this DMA
             if (!grouped[dma].find(i => i.id === investor.id)) {
               grouped[dma].push({
                 ...investor,
                 zip_count: matchingZips.length,
-                market_type: investor.markets[0]?.market_type || 'dma_level',
+                market_type: marketType || 'dma_level',
               });
             }
           }
         });
       });
 
-      return grouped;
+      const overview = {
+        total: uniqueInvestorIds.size,
+        national: nationalInvestors.size,
+        stateLevel: stateLevelInvestors.size,
+      };
+
+      console.log(`📊 Side Panel ${stateCode}:`, {
+        total: overview.total,
+        national: overview.national,
+        stateLevel: overview.stateLevel,
+        uniqueIds: Array.from(uniqueInvestorIds),
+      });
+
+      return { grouped, overview };
     },
   });
+
+  const dmaInvestors = dmaInvestorsData?.grouped || {};
+  const overview = dmaInvestorsData?.overview || { total: 0, national: 0, stateLevel: 0 };
 
   const getTierColor = (tier: number) => {
     if (tier === 1) return "bg-amber-500";
@@ -155,7 +151,7 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
     return 'bg-gray-500';
   };
 
-  const isLoading = isLoadingOverview || isLoadingDmas || isLoadingInvestors;
+  const isLoading = isLoadingDmas || isLoadingInvestors;
 
   return (
     <div className="w-96 border-l bg-sidebar-background overflow-y-auto">
@@ -165,11 +161,9 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
             <MapPin className="h-4 w-4" />
             {stateCode}
           </h3>
-          {stateOverview && (
-            <p className="text-sm text-muted-foreground">
-              {stateOverview.total} investor{stateOverview.total !== 1 ? 's' : ''}
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            {overview.total} investor{overview.total !== 1 ? 's' : ''}
+          </p>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
@@ -178,28 +172,31 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
 
       <div className="p-4 space-y-4">
         {/* State Overview */}
-        {isLoadingOverview ? (
-          <Skeleton className="h-24 w-full" />
-        ) : stateOverview && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Coverage Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total Investors:</span>
-                <span className="font-medium">{stateOverview.total}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">National Coverage:</span>
-                <Badge variant="outline" className="ml-2">{stateOverview.national}</Badge>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">State-Level:</span>
-                <Badge variant="outline" className="ml-2">{stateOverview.stateLevel}</Badge>
-              </div>
-            </CardContent>
-          </Card>
+        {isLoading ? (
+          <Skeleton className="h-32 w-full" />
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            <Card>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm font-medium">Total Investors</CardTitle>
+                <div className="text-2xl font-bold">{overview.total}</div>
+              </CardHeader>
+            </Card>
+            
+            <Card>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm font-medium">National Coverage</CardTitle>
+                <div className="text-2xl font-bold">{overview.national}</div>
+              </CardHeader>
+            </Card>
+            
+            <Card>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm font-medium">State-Level</CardTitle>
+                <div className="text-2xl font-bold">{overview.stateLevel}</div>
+              </CardHeader>
+            </Card>
+          </div>
         )}
 
         {/* DMA Breakdown */}

@@ -238,34 +238,21 @@ export function CoverageMapView({
           console.warn(`⚠️ Coordinates out of US bounds for ${state}: [${lng}, ${lat}]`);
           return null;
         }
+        console.log(`✅ State ${state}: ${data.totalInvestors} unique investors`);
         return {
           type: 'Feature',
           geometry: { type: 'Point', coordinates: coords },
           properties: {
             state,
-            totalInvestors: data.totalInvestors + (includeNational ? nationalCount : 0),
+            totalInvestors: data.totalInvestors, // Already includes national investors
           },
         } as const;
       })
       .filter(Boolean) as any[];
 
-    // Add features for states with ONLY national coverage (no DMA-specific investors)
-    const allStateFeatures = includeNational
-      ? Object.keys(stateCoordinates)
-          .filter(state => !stateDataWithCounts[state]) // States not in DMA coverage
-          .map(state => ({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: stateCoordinates[state] },
-            properties: {
-              state,
-              totalInvestors: nationalCount, // Just the national investors
-            },
-          }))
-      : [];
-
     const featureCollection = {
       type: 'FeatureCollection',
-      features: [...dmaSpecificFeatures, ...allStateFeatures],
+      features: dmaSpecificFeatures,
     } as const;
 
     const mapInstance = map.current!;
