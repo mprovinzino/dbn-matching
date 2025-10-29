@@ -231,6 +231,13 @@ export function CoverageMapView({
     const circleLayerId = 'state-coverage-circles';
     const labelLayerId = 'state-coverage-labels';
 
+    // Rebuild source and layers when focusing on a single investor to avoid stale tiles
+    if (mapInstance.getSource(sourceId) && highlightInvestorId) {
+      if (mapInstance.getLayer(labelLayerId)) mapInstance.removeLayer(labelLayerId);
+      if (mapInstance.getLayer(circleLayerId)) mapInstance.removeLayer(circleLayerId);
+      mapInstance.removeSource(sourceId);
+    }
+
     if (!mapInstance.getSource(sourceId)) {
       mapInstance.addSource(sourceId, {
         type: 'geojson',
@@ -581,6 +588,13 @@ export function CoverageMapView({
     const stateLevelSourceId = 'state-level-coverage';
     const stateLevelCircleId = 'state-level-markers';
     const stateLevelLabelId = 'state-level-labels';
+
+    // Rebuild state-level source when focusing on a single investor
+    if (mapInstance.getSource(stateLevelSourceId) && highlightInvestorId) {
+      if (mapInstance.getLayer(stateLevelLabelId)) mapInstance.removeLayer(stateLevelLabelId);
+      if (mapInstance.getLayer(stateLevelCircleId)) mapInstance.removeLayer(stateLevelCircleId);
+      mapInstance.removeSource(stateLevelSourceId);
+    }
 
     if (!mapInstance.getSource(stateLevelSourceId)) {
       mapInstance.addSource(stateLevelSourceId, {
