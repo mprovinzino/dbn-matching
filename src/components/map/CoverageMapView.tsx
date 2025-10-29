@@ -27,6 +27,7 @@ export function CoverageMapView({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
+  const dmaStateOverrideRef = useRef<Record<string, string>>({});
   
   const { data: investorDetails } = useInvestorsByState(hoveredState);
   const { data: nationalCoverageData } = useNationalCoverageCount();
@@ -526,7 +527,11 @@ export function CoverageMapView({
     }
 
     // Add state-level coverage markers (green circles for full state coverage)
-    const stateInvestorCounts = stateLevelCoverage.reduce((acc, item) => {
+    const filteredStateLevel = highlightInvestorId
+      ? stateLevelCoverage.filter((item) => item.investor_id === highlightInvestorId)
+      : stateLevelCoverage;
+
+    const stateInvestorCounts = filteredStateLevel.reduce((acc, item) => {
       if (!acc[item.state]) {
         acc[item.state] = { count: 0, investors: [] };
       }
@@ -664,7 +669,7 @@ export function CoverageMapView({
     return () => {
       window.removeEventListener('dma-click', handleDmaClick);
     };
-  }, [coverage, mapLoaded, onDmaClick, nationalCoverageData, searchQuery, stateLevelCoverage]);
+  }, [coverage, mapLoaded, onDmaClick, nationalCoverageData, searchQuery, stateLevelCoverage, highlightInvestorId]);
 
   // Effect to show hover tooltip with investor details
   useEffect(() => {
