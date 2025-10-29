@@ -21,6 +21,7 @@ export default function CoverageMap() {
   const [marketType, setMarketType] = useState("all");
   const [minInvestors, setMinInvestors] = useState(0);
   const [selectedState, setSelectedState] = useState<string | null>(null);
+  const [selectedStateData, setSelectedStateData] = useState<{ investorIds: string[], coverage: any[], stateLevelData: any[] } | null>(null);
   const [totalInvestors, setTotalInvestors] = useState(0);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(investorParam);
   const [selectedInvestorName, setSelectedInvestorName] = useState<string | null>(null);
@@ -154,14 +155,21 @@ export default function CoverageMap() {
           coverage={coverage || []}
           stateLevelCoverage={stateLevelCoverage || []}
           searchQuery={debouncedSearch}
-          onDmaClick={setSelectedState}
+          onDmaClick={(state, stateData) => {
+            setSelectedState(state);
+            setSelectedStateData(stateData);
+          }}
           highlightInvestorId={selectedInvestorId}
         />
 
-        {selectedState && (
+        {selectedState && selectedStateData && (
           <CoverageInfoPanel
             stateCode={selectedState}
-            onClose={() => setSelectedState(null)}
+            stateData={selectedStateData}
+            onClose={() => {
+              setSelectedState(null);
+              setSelectedStateData(null);
+            }}
           />
         )}
       </div>

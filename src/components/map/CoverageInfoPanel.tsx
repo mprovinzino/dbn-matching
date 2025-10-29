@@ -10,11 +10,30 @@ import { useNavigate } from "react-router-dom";
 
 interface CoverageInfoPanelProps {
   stateCode: string;
+  stateData: {
+    investorIds: string[];
+    coverage: any[];
+    stateLevelData: any[];
+  };
   onClose: () => void;
 }
 
-export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps) {
+export function CoverageInfoPanel({ stateCode, stateData, onClose }: CoverageInfoPanelProps) {
   const navigate = useNavigate();
+
+  // Calculate overview from the passed state data (same data the map uses)
+  const overview = {
+    total: stateData.investorIds.length,
+    national: stateData.stateLevelData.filter(s => s.market_type === 'full_coverage').length,
+    stateLevel: stateData.investorIds.length - stateData.stateLevelData.filter(s => s.market_type === 'full_coverage').length,
+  };
+
+  console.log(`📊 Side Panel ${stateCode} (using map data):`, {
+    total: overview.total,
+    national: overview.national,
+    stateLevel: overview.stateLevel,
+    uniqueIds: stateData.investorIds,
+  });
 
   // Fetch DMAs in this state
   const { data: dmaData, isLoading: isLoadingDmas } = useQuery({
@@ -42,15 +61,16 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
     },
   });
 
-  // Fetch detailed investor info for each DMA and calculate state overview
-  const { data: dmaInvestorsData, isLoading: isLoadingInvestors } = useQuery({
-    queryKey: ['dma-investors', stateCode, dmaData],
+  // Fetch detailed investor info for each DMA
+  const { data: dmaInvestors, isLoading: isLoadingInvestors } = useQuery({
+    queryKey: ['dma-investors-detail', stateCode, dmaData, stateData.investorIds],
     enabled: !!dmaData && dmaData.length > 0,
     queryFn: async () => {
-      if (!dmaData) return { grouped: {}, overview: { total: 0, national: 0, stateLevel: 0 } };
+      if (!dmaData) return {};
 
       const dmaNames = dmaData.map((d: any) => d.dma);
       
+      // Only fetch the investors that are in this state (from map data)
       const { data: investors, error } = await supabase
         .from('investors')
         .select(`
@@ -65,7 +85,8 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
             zip_codes
           )
         `)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .in('id', stateData.investorIds);
 
       if (error) throw error;
 
@@ -81,11 +102,8 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
         dmaZipMap[z.dma].push(z.zip_code);
       });
 
-      // Group investors by DMA and track all unique investors in state
+      // Group investors by DMA
       const grouped: Record<string, any[]> = {};
-      const uniqueInvestorIds = new Set<string>();
-      const nationalInvestors = new Set<string>();
-      const stateLevelInvestors = new Set<string>();
       
       investors?.forEach((investor: any) => {
         const investorZips = investor.markets.flatMap((m: any) => m.zip_codes || []);
@@ -96,14 +114,6 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
           const matchingZips = investorZips.filter((z: string) => dmaZips.includes(z));
           
           if (matchingZips.length > 0) {
-            uniqueInvestorIds.add(investor.id);
-            
-            if (marketType === 'full_coverage') {
-              nationalInvestors.add(investor.id);
-            } else {
-              stateLevelInvestors.add(investor.id);
-            }
-            
             if (!grouped[dma]) grouped[dma] = [];
             
             // Check if already added to this DMA
@@ -118,25 +128,11 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
         });
       });
 
-      const overview = {
-        total: uniqueInvestorIds.size,
-        national: nationalInvestors.size,
-        stateLevel: stateLevelInvestors.size,
-      };
-
-      console.log(`📊 Side Panel ${stateCode}:`, {
-        total: overview.total,
-        national: overview.national,
-        stateLevel: overview.stateLevel,
-        uniqueIds: Array.from(uniqueInvestorIds),
-      });
-
-      return { grouped, overview };
+      return grouped;
     },
   });
 
-  const dmaInvestors = dmaInvestorsData?.grouped || {};
-  const overview = dmaInvestorsData?.overview || { total: 0, national: 0, stateLevel: 0 };
+  const isLoading = isLoadingDmas || isLoadingInvestors;
 
   const getTierColor = (tier: number) => {
     if (tier === 1) return "bg-amber-500";
@@ -150,8 +146,6 @@ export function CoverageInfoPanel({ stateCode, onClose }: CoverageInfoPanelProps
     if (status === 'paused') return 'bg-amber-500';
     return 'bg-gray-500';
   };
-
-  const isLoading = isLoadingDmas || isLoadingInvestors;
 
   return (
     <div className="w-96 border-l bg-sidebar-background overflow-y-auto">
