@@ -14,6 +14,8 @@ export default function CoverageMap() {
   const navigate = useNavigate();
   const investorParam = searchParams.get("investor");
 
+  const [searchInput, setSearchInput] = useState("");
+  // Query used to actually filter the map (set only on selection)
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [marketType, setMarketType] = useState("all");
@@ -23,12 +25,12 @@ export default function CoverageMap() {
   const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(investorParam);
   const [selectedInvestorName, setSelectedInvestorName] = useState<string | null>(null);
 
-  // Debounce search to prevent refetching on every keystroke
+  // Debounce the actual filter query (not the input typing)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-    }, 500);
-    
+    }, 300);
+
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -46,23 +48,31 @@ export default function CoverageMap() {
 
   // Handle suggestion selection
   const handleSuggestionSelect = (suggestion: { type: string; id: string; label: string }) => {
+    // Reflect selection in the input
+    setSearchInput(suggestion.label);
+
     if (suggestion.type === 'investor') {
+      // Exact, ID-based filtering
       setSelectedInvestorId(suggestion.id);
       setSelectedInvestorName(suggestion.label);
+      // Do not use text filtering when an exact investor is selected
+      setSearchQuery("");
     } else {
-      // For DMA or state selections, clear investor filter
+      // DMA or state selections use text-based filtering
       setSelectedInvestorId(null);
       setSelectedInvestorName(null);
+      setSearchQuery(suggestion.label);
     }
   };
 
-  // Clear investor filter when user types freely
+  // Do not trigger filtering while typing; only update input value
   const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    // If user is typing freely (not selecting from dropdown), clear exact investor filter
+    setSearchInput(value);
+    // If input is cleared, also clear filters
     if (!value.trim()) {
       setSelectedInvestorId(null);
       setSelectedInvestorName(null);
+      setSearchQuery("");
     }
   };
 
@@ -126,7 +136,7 @@ export default function CoverageMap() {
       {/* Map Layout */}
       <div className="flex-1 flex overflow-hidden">
         <MapControls
-          searchQuery={searchQuery}
+          searchQuery={searchInput}
           onSearchChange={handleSearchChange}
           marketType={marketType}
           onMarketTypeChange={setMarketType}
