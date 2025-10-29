@@ -20,6 +20,8 @@ export default function CoverageMap() {
   const [minInvestors, setMinInvestors] = useState(0);
   const [selectedDma, setSelectedDma] = useState<string | null>(null);
   const [totalInvestors, setTotalInvestors] = useState(0);
+  const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(investorParam);
+  const [selectedInvestorName, setSelectedInvestorName] = useState<string | null>(null);
 
   // Debounce search to prevent refetching on every keystroke
   useEffect(() => {
@@ -34,9 +36,35 @@ export default function CoverageMap() {
     marketType,
     minInvestors,
     searchQuery: debouncedSearch,
+    investorId: selectedInvestorId,
   });
 
-  const { data: stateLevelCoverage, isLoading: isLoadingStates } = useStateLevelCoverage(debouncedSearch);
+  const { data: stateLevelCoverage, isLoading: isLoadingStates } = useStateLevelCoverage(
+    debouncedSearch, 
+    selectedInvestorId
+  );
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = (suggestion: { type: string; id: string; label: string }) => {
+    if (suggestion.type === 'investor') {
+      setSelectedInvestorId(suggestion.id);
+      setSelectedInvestorName(suggestion.label);
+    } else {
+      // For DMA or state selections, clear investor filter
+      setSelectedInvestorId(null);
+      setSelectedInvestorName(null);
+    }
+  };
+
+  // Clear investor filter when user types freely
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    // If user is typing freely (not selecting from dropdown), clear exact investor filter
+    if (!value.trim()) {
+      setSelectedInvestorId(null);
+      setSelectedInvestorName(null);
+    }
+  };
 
   // Load total investor count
   useEffect(() => {
@@ -99,7 +127,7 @@ export default function CoverageMap() {
       <div className="flex-1 flex overflow-hidden">
         <MapControls
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={handleSearchChange}
           marketType={marketType}
           onMarketTypeChange={setMarketType}
           minInvestors={minInvestors}
@@ -107,7 +135,9 @@ export default function CoverageMap() {
           totalDmas={coverage?.length || 0}
           totalInvestors={totalInvestors}
           isFetching={isFetching}
-          highlightInvestorId={investorParam}
+          highlightInvestorId={selectedInvestorId}
+          onSuggestionSelect={handleSuggestionSelect}
+          selectedInvestorName={selectedInvestorName}
         />
 
         <CoverageMapView
@@ -115,7 +145,7 @@ export default function CoverageMap() {
           stateLevelCoverage={stateLevelCoverage || []}
           searchQuery={debouncedSearch}
           onDmaClick={setSelectedDma}
-          highlightInvestorId={investorParam}
+          highlightInvestorId={selectedInvestorId}
         />
 
         {selectedDma && (

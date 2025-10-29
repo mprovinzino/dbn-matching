@@ -17,6 +17,7 @@ export interface MapFilters {
   marketType: string;
   minInvestors: number;
   searchQuery: string;
+  investorId?: string | null;
 }
 
 export function useMapCoverage(filters: MapFilters) {
@@ -29,8 +30,22 @@ export function useMapCoverage(filters: MapFilters) {
       
       let filtered = data as DmaCoverageData[];
       
-      // Apply search query filter (investor name or DMA name)
-      if (filters.searchQuery && filters.searchQuery.trim()) {
+      // If we have an exact investor ID, use that for precise filtering
+      if (filters.investorId) {
+        console.log('🎯 Exact investor ID filter:', filters.investorId);
+        
+        filtered = filtered
+          .filter(dma => dma.investor_ids.some(id => id.toString() === filters.investorId))
+          .map(dma => ({
+            ...dma,
+            investor_ids: [filters.investorId],
+            investor_count: 1,
+          } as DmaCoverageData));
+        
+        console.log('📍 Filtered to exact investor DMAs:', filtered.length);
+      }
+      // Otherwise, apply fuzzy search query filter (investor name or DMA name)
+      else if (filters.searchQuery && filters.searchQuery.trim()) {
         const searchLower = filters.searchQuery.toLowerCase().trim();
         
         // Search for matching investors by company name
@@ -245,9 +260,9 @@ export interface StateLevelCoverageData {
   tier: number;
 }
 
-export function useStateLevelCoverage(searchQuery?: string) {
+export function useStateLevelCoverage(searchQuery?: string, investorId?: string | null) {
   return useQuery({
-    queryKey: ['state-level-coverage', searchQuery],
+    queryKey: ['state-level-coverage', searchQuery, investorId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_state_level_coverage');
       
@@ -255,14 +270,19 @@ export function useStateLevelCoverage(searchQuery?: string) {
       
       let filtered = data as StateLevelCoverageData[];
       
-      // Filter by investor name if searching
-      if (searchQuery?.trim()) {
+      // Filter by exact investor ID if provided
+      if (investorId) {
+        filtered = filtered.filter(item => item.investor_id === investorId);
+        console.log('🟢 State-level coverage filtered by ID:', filtered.length, 'states');
+      }
+      // Otherwise filter by investor name if searching
+      else if (searchQuery?.trim()) {
         const searchLower = searchQuery.toLowerCase().trim();
         filtered = filtered.filter(item => 
           item.investor_name.toLowerCase().includes(searchLower)
         );
         
-        console.log('🟢 State-level coverage filtered:', filtered.length, 'states');
+        console.log('🟢 State-level coverage filtered by name:', filtered.length, 'states');
       }
       
       return filtered;

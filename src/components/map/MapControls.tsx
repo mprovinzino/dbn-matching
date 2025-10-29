@@ -16,6 +16,8 @@ interface MapControlsProps {
   totalInvestors: number;
   isFetching: boolean;
   highlightInvestorId?: string | null;
+  onSuggestionSelect?: (suggestion: { type: string; id: string; label: string }) => void;
+  selectedInvestorName?: string | null;
 }
 
 export function MapControls({
@@ -29,6 +31,8 @@ export function MapControls({
   totalInvestors,
   isFetching,
   highlightInvestorId,
+  onSuggestionSelect,
+  selectedInvestorName,
 }: MapControlsProps) {
   return (
     <div className="w-80 border-r bg-sidebar-background p-4 space-y-6 overflow-y-auto">
@@ -66,21 +70,26 @@ export function MapControls({
       <SearchAutocomplete
         value={searchQuery}
         onChange={onSearchChange}
+        onSelect={onSuggestionSelect}
       />
-      {searchQuery && (
-        <div className="text-xs text-muted-foreground p-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
-          <span className="font-semibold text-blue-600 dark:text-blue-400">Filtered View:</span>{" "}
-          Showing coverage for "{searchQuery}"
+      
+      {selectedInvestorName && (
+        <div className="text-xs text-muted-foreground p-2 bg-purple-50 dark:bg-purple-950/20 rounded-md border border-purple-200 dark:border-purple-800">
+          <span className="font-semibold text-purple-600 dark:text-purple-400">Exact Match:</span>{" "}
+          Showing coverage for "{selectedInvestorName}"
           {isFetching && (
             <Loader2 className="inline-block ml-2 h-3 w-3 animate-spin" />
           )}
         </div>
       )}
       
-      {highlightInvestorId && !searchQuery && (
-        <div className="text-xs text-muted-foreground p-2 bg-purple-50 dark:bg-purple-950/20 rounded-md border border-purple-200 dark:border-purple-800">
-          <span className="font-semibold text-purple-600 dark:text-purple-400">Investor View:</span>{" "}
-          Showing coverage for selected investor only
+      {searchQuery && !selectedInvestorName && (
+        <div className="text-xs text-muted-foreground p-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
+          <span className="font-semibold text-blue-600 dark:text-blue-400">Fuzzy Search:</span>{" "}
+          Showing results matching "{searchQuery}"
+          {isFetching && (
+            <Loader2 className="inline-block ml-2 h-3 w-3 animate-spin" />
+          )}
         </div>
       )}
 

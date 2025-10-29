@@ -16,9 +16,10 @@ interface SearchSuggestion {
 interface SearchAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
+  onSelect?: (suggestion: SearchSuggestion) => void;
 }
 
-export function SearchAutocomplete({ value, onChange }: SearchAutocompleteProps) {
+export function SearchAutocomplete({ value, onChange, onSelect }: SearchAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -164,6 +165,7 @@ export function SearchAutocomplete({ value, onChange }: SearchAutocompleteProps)
 
   const handleSelect = (suggestion: SearchSuggestion) => {
     onChange(suggestion.label);
+    onSelect?.(suggestion);
     setIsOpen(false);
     inputRef.current?.blur();
   };
