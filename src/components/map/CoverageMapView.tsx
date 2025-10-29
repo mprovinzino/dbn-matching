@@ -113,78 +113,125 @@ export function CoverageMapView({
   useEffect(() => {
     if (!map.current || !mapLoaded || !coverage) return;
 
-    console.log('🗺️ CoverageMapView updating with:', {
-      coverageItems: coverage.length,
-      highlightInvestorId,
-    });
+    const updateMapData = async () => {
+      console.log('🗺️ CoverageMapView updating with:', {
+        coverageItems: coverage.length,
+        highlightInvestorId,
+      });
 
-    // Clear existing markers
-    markers.current.forEach((marker) => marker.remove());
-    markers.current = [];
+      // Clear existing markers
+      markers.current.forEach((marker) => marker.remove());
+      markers.current = [];
 
-    // Filter out invalid state codes (like "XX" for multi-state DMAs)
-    const validCoverage = coverage.filter(dma => {
-      const hasValidState = dma.state && dma.state !== 'XX' && stateCoordinates[dma.state];
-      if (!hasValidState) {
-        console.warn(`⚠️ Skipping DMA "${dma.dma}" with invalid state code: "${dma.state}"`);
+      // Filter out invalid state codes (like "XX" for multi-state DMAs)
+      const validCoverage = coverage.filter(dma => {
+        const hasValidState = dma.state && dma.state !== 'XX' && stateCoordinates[dma.state];
+        if (!hasValidState) {
+          console.warn(`⚠️ Skipping DMA "${dma.dma}" with invalid state code: "${dma.state}"`);
+        }
+        return hasValidState;
+      });
+
+      // Filter by highlighted investor if specified
+      const filteredCoverage = highlightInvestorId
+        ? validCoverage.filter(dma => dma.investor_ids.includes(highlightInvestorId))
+        : validCoverage;
+
+      console.log('🎯 After filtering:', {
+        filteredCount: filteredCoverage.length,
+        uniqueStates: [...new Set(filteredCoverage.map(d => d.state))],
+      });
+
+      // Build dominant state overrides for multi-state DMAs
+      const uniqueDmas = [...new Set(filteredCoverage.map(d => d.dma))];
+      
+      if (uniqueDmas.length > 0) {
+        console.log('🔍 Querying dominant states for', uniqueDmas.length, 'DMAs');
+        
+        const { data: zipData, error } = await supabase
+          .from('zip_code_reference')
+          .select('dma, state')
+          .in('dma', uniqueDmas);
+
+        if (!error && zipData) {
+          // Count occurrences per (dma, state)
+          const dmaCounts: Record<string, Record<string, number>> = {};
+          
+          zipData.forEach(row => {
+            if (!dmaCounts[row.dma]) dmaCounts[row.dma] = {};
+            dmaCounts[row.dma][row.state] = (dmaCounts[row.dma][row.state] || 0) + 1;
+          });
+
+          // Find dominant state for each DMA
+          const overrideChanges: Array<{ dma: string; original: string; override: string }> = [];
+          
+          Object.entries(dmaCounts).forEach(([dma, stateCounts]) => {
+            const sortedStates = Object.entries(stateCounts).sort((a, b) => b[1] - a[1]);
+            const dominantState = sortedStates[0][0];
+            
+            // Find original state from coverage data
+            const originalState = filteredCoverage.find(d => d.dma === dma)?.state;
+            
+            if (dominantState && originalState && dominantState !== originalState) {
+              overrideChanges.push({ dma, original: originalState, override: dominantState });
+            }
+            
+            dmaStateOverrideRef.current[dma] = dominantState;
+          });
+
+          if (overrideChanges.length > 0) {
+            console.log('🔄 State overrides applied:', overrideChanges);
+          }
+        }
       }
-      return hasValidState;
-    });
 
-    // Filter by highlighted investor if specified
-    const filteredCoverage = highlightInvestorId
-      ? validCoverage.filter(dma => dma.investor_ids.includes(highlightInvestorId))
-      : validCoverage;
+      // Group by state (using overrides) and collect unique investor IDs
+      const stateData = filteredCoverage.reduce((acc, dma) => {
+        const stateKey = dmaStateOverrideRef.current[dma.dma] ?? dma.state;
+        
+        if (!acc[stateKey]) {
+          acc[stateKey] = {
+            investorIdSet: new Set<string>(),
+            dmas: [],
+          };
+        }
+        // Add all investor IDs from this DMA to the state's set
+        dma.investor_ids.forEach(id => acc[stateKey].investorIdSet.add(id));
+        acc[stateKey].dmas.push(dma);
+        return acc;
+      }, {} as Record<string, { investorIdSet: Set<string>; dmas: DmaCoverageData[] }>);
 
-    console.log('🎯 After filtering:', {
-      filteredCount: filteredCoverage.length,
-      uniqueStates: [...new Set(filteredCoverage.map(d => d.state))],
-    });
-
-    // Group by state and collect unique investor IDs
-    const stateData = filteredCoverage.reduce((acc, dma) => {
-      if (!acc[dma.state]) {
-        acc[dma.state] = {
-          investorIdSet: new Set<string>(),
-          dmas: [],
+      // Convert Set size to totalInvestors count
+      const stateDataWithCounts = Object.entries(stateData).reduce((acc, [state, data]) => {
+        acc[state] = {
+          totalInvestors: data.investorIdSet.size,
+          dmas: data.dmas,
         };
-      }
-      // Add all investor IDs from this DMA to the state's set
-      dma.investor_ids.forEach(id => acc[dma.state].investorIdSet.add(id));
-      acc[dma.state].dmas.push(dma);
-      return acc;
-    }, {} as Record<string, { investorIdSet: Set<string>; dmas: DmaCoverageData[] }>);
+        return acc;
+      }, {} as Record<string, { totalInvestors: number; dmas: DmaCoverageData[] }>);
 
-    // Convert Set size to totalInvestors count
-    const stateDataWithCounts = Object.entries(stateData).reduce((acc, [state, data]) => {
-      acc[state] = {
-        totalInvestors: data.investorIdSet.size,
-        dmas: data.dmas,
-      };
-      return acc;
-    }, {} as Record<string, { totalInvestors: number; dmas: DmaCoverageData[] }>);
+      const finalStates = Object.keys(stateDataWithCounts);
+      console.log('📊 State data aggregated with overrides:', {
+        states: finalStates,
+        stateData: Object.entries(stateDataWithCounts).map(([state, data]) => ({
+          state,
+          investors: data.totalInvestors,
+          dmas: data.dmas.length,
+        })),
+      });
 
-    console.log('📊 State data aggregated:', {
-      states: Object.keys(stateDataWithCounts),
-      stateData: Object.entries(stateDataWithCounts).map(([state, data]) => ({
-        state,
-        investors: data.totalInvestors,
-        dmas: data.dmas.length,
-      })),
-    });
+      // Build GeoJSON features for state aggregates and render via Mapbox layers (more accurate than DOM markers)
+      stateDataRef.current = stateDataWithCounts;
 
-    // Build GeoJSON features for state aggregates and render via Mapbox layers (more accurate than DOM markers)
-    stateDataRef.current = stateDataWithCounts;
+      const includeNational = !searchQuery?.trim() && !highlightInvestorId;
+      const nationalCount = includeNational ? (nationalCoverageData?.count || 0) : 0;
 
-    const includeNational = !searchQuery?.trim() && !highlightInvestorId;
-    const nationalCount = includeNational ? (nationalCoverageData?.count || 0) : 0;
+      console.log('🌍 National coverage:', { includeNational, nationalCount });
 
-    console.log('🌍 National coverage:', { includeNational, nationalCount });
-
-    // Features for states with DMA-specific coverage
-    const dmaSpecificFeatures = Object.entries(stateDataWithCounts)
-      .map(([state, data]) => {
-        const coords = stateCoordinates[state];
+      // Features for states with DMA-specific coverage (using overridden state coordinates)
+      const dmaSpecificFeatures = Object.entries(stateDataWithCounts)
+        .map(([state, data]) => {
+          const coords = stateCoordinates[state];
         if (!coords) {
           console.warn(`⚠️ No coordinates found for state: ${state}`);
           return null;
@@ -695,15 +742,18 @@ export function CoverageMapView({
     }
 
 
-    // Handle DMA click from popup
-    const handleDmaClick = (e: any) => {
-      onDmaClick(e.detail);
-    };
-    window.addEventListener('dma-click', handleDmaClick);
+      // Handle DMA click from popup
+      const handleDmaClick = (e: any) => {
+        onDmaClick(e.detail);
+      };
+      window.addEventListener('dma-click', handleDmaClick);
 
-    return () => {
-      window.removeEventListener('dma-click', handleDmaClick);
+      return () => {
+        window.removeEventListener('dma-click', handleDmaClick);
+      };
     };
+
+    updateMapData();
   }, [coverage, mapLoaded, onDmaClick, nationalCoverageData, searchQuery, stateLevelCoverage, highlightInvestorId]);
 
   // Effect to show hover tooltip with investor details
