@@ -15,6 +15,7 @@ interface MapControlsProps {
   totalDmas: number;
   totalInvestors: number;
   isFetching: boolean;
+  highlightInvestorId?: string | null;
 }
 
 export function MapControls({
@@ -27,6 +28,7 @@ export function MapControls({
   totalDmas,
   totalInvestors,
   isFetching,
+  highlightInvestorId,
 }: MapControlsProps) {
   return (
     <div className="w-80 border-r bg-sidebar-background p-4 space-y-6 overflow-y-auto">
@@ -72,6 +74,13 @@ export function MapControls({
           {isFetching && (
             <Loader2 className="inline-block ml-2 h-3 w-3 animate-spin" />
           )}
+        </div>
+      )}
+      
+      {highlightInvestorId && !searchQuery && (
+        <div className="text-xs text-muted-foreground p-2 bg-purple-50 dark:bg-purple-950/20 rounded-md border border-purple-200 dark:border-purple-800">
+          <span className="font-semibold text-purple-600 dark:text-purple-400">Investor View:</span>{" "}
+          Showing coverage for selected investor only
         </div>
       )}
 

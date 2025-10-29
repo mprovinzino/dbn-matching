@@ -125,8 +125,13 @@ export function CoverageMapView({
       return hasValidState;
     });
 
+    // Filter by highlighted investor if specified
+    const filteredCoverage = highlightInvestorId
+      ? validCoverage.filter(dma => dma.investor_ids.includes(highlightInvestorId))
+      : validCoverage;
+
     // Group by state and collect unique investor IDs
-    const stateData = validCoverage.reduce((acc, dma) => {
+    const stateData = filteredCoverage.reduce((acc, dma) => {
       if (!acc[dma.state]) {
         acc[dma.state] = {
           investorIdSet: new Set<string>(),
@@ -151,7 +156,7 @@ export function CoverageMapView({
     // Build GeoJSON features for state aggregates and render via Mapbox layers (more accurate than DOM markers)
     stateDataRef.current = stateDataWithCounts;
 
-    const includeNational = !searchQuery?.trim();
+    const includeNational = !searchQuery?.trim() && !highlightInvestorId;
     const nationalCount = includeNational ? (nationalCoverageData?.count || 0) : 0;
 
     // Features for states with DMA-specific coverage

@@ -107,6 +107,7 @@ export default function CoverageMap() {
           totalDmas={coverage?.length || 0}
           totalInvestors={totalInvestors}
           isFetching={isFetching}
+          highlightInvestorId={investorParam}
         />
 
         <CoverageMapView
