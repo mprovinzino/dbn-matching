@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapControls } from "@/components/map/MapControls";
 import { CoverageMapView } from "@/components/map/CoverageMapView";
-import { DmaInfoPanel } from "@/components/map/DmaInfoPanel";
+import { CoverageInfoPanel } from "@/components/map/CoverageInfoPanel";
 import { useMapCoverage, useStateLevelCoverage } from "@/hooks/useMapCoverage";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
@@ -20,7 +20,7 @@ export default function CoverageMap() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [marketType, setMarketType] = useState("all");
   const [minInvestors, setMinInvestors] = useState(0);
-  const [selectedDma, setSelectedDma] = useState<string | null>(null);
+  const [selectedState, setSelectedState] = useState<string | null>(null);
   const [totalInvestors, setTotalInvestors] = useState(0);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(investorParam);
   const [selectedInvestorName, setSelectedInvestorName] = useState<string | null>(null);
@@ -154,14 +154,14 @@ export default function CoverageMap() {
           coverage={coverage || []}
           stateLevelCoverage={stateLevelCoverage || []}
           searchQuery={debouncedSearch}
-          onDmaClick={setSelectedDma}
+          onDmaClick={setSelectedState}
           highlightInvestorId={selectedInvestorId}
         />
 
-        {selectedDma && (
-          <DmaInfoPanel
-            dmaName={selectedDma}
-            onClose={() => setSelectedDma(null)}
+        {selectedState && (
+          <CoverageInfoPanel
+            stateCode={selectedState}
+            onClose={() => setSelectedState(null)}
           />
         )}
       </div>
