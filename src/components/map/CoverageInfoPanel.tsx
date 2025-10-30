@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
 
 interface CoverageInfoPanelProps {
   stateCode: string;
@@ -47,104 +48,91 @@ export function CoverageInfoPanel({ stateCode, stateData, onClose }: CoverageInf
     unionIds: Array.from(unionIds),
   });
 
-  // Fetch DMAs in this state
-  const { data: dmaData, isLoading: isLoadingDmas } = useQuery({
-    queryKey: ['state-dmas', stateCode],
-    queryFn: async () => {
-      // Get all DMAs in this state from zip_code_reference
-      const { data: zipData, error } = await supabase
-        .from('zip_code_reference')
-        .select('dma, zip_code')
-        .eq('state', stateCode)
-        .not('dma', 'is', null);
-
-      if (error) throw error;
-      
-      // Group by DMA and count zip codes
-      const dmaGroups = zipData?.reduce((acc, row) => {
-        if (!acc[row.dma]) {
-          acc[row.dma] = { dma: row.dma, zip_count: 0 };
-        }
-        acc[row.dma].zip_count++;
-        return acc;
-      }, {} as Record<string, { dma: string; zip_count: number }>);
-
-      return Object.values(dmaGroups || {});
-    },
+// Build DMA list from coverage passed in from the map (no extra queries)
+const dmas = useMemo(() => {
+  const list = (stateData.coverage || []).map((d: any) => ({
+    dma: d.dma,
+    investor_ids: Array.from(new Set(d.investor_ids || [])),
+  }));
+  // Ensure unique by DMA name
+  const seen = new Set<string>();
+  return list.filter((d) => {
+    if (seen.has(d.dma)) return false;
+    seen.add(d.dma);
+    return true;
   });
+}, [stateData.coverage]);
 
-  // Fetch detailed investor info for each DMA
-  const { data: dmaInvestors, isLoading: isLoadingInvestors } = useQuery({
-    queryKey: ['dma-investors-detail', stateCode, dmaData, stateData.investorIds],
-    enabled: !!dmaData && dmaData.length > 0,
-    queryFn: async () => {
-      if (!dmaData) return {};
+// For per-DMA lists, exclude national (full_coverage) investors
+const nationalIdsSet = nationalIds;
 
-      const dmaNames = dmaData.map((d: any) => d.dma);
-      
-      // Only fetch the investors that are in this state (from map data)
-      const { data: investors, error } = await supabase
-        .from('investors')
-        .select(`
-          id,
-          company_name,
-          main_poc,
-          tier,
-          status,
-          coverage_type,
-          markets!inner(
-            market_type,
-            zip_codes
-          )
-        `)
-        .eq('status', 'active')
-        .in('id', stateData.investorIds);
-
-      if (error) throw error;
-
-      // Get zip codes for each DMA
-      const { data: zipData } = await supabase
-        .from('zip_code_reference')
-        .select('zip_code, dma')
-        .in('dma', dmaNames);
-
-      const dmaZipMap: Record<string, string[]> = {};
-      zipData?.forEach((z: any) => {
-        if (!dmaZipMap[z.dma]) dmaZipMap[z.dma] = [];
-        dmaZipMap[z.dma].push(z.zip_code);
-      });
-
-      // Group investors by DMA
-      const grouped: Record<string, any[]> = {};
-      
-      investors?.forEach((investor: any) => {
-        const investorZips = investor.markets.flatMap((m: any) => m.zip_codes || []);
-        const marketType = investor.markets[0]?.market_type;
-        
-        dmaNames.forEach((dma: string) => {
-          const dmaZips = dmaZipMap[dma] || [];
-          const matchingZips = investorZips.filter((z: string) => dmaZips.includes(z));
-          
-          if (matchingZips.length > 0) {
-            if (!grouped[dma]) grouped[dma] = [];
-            
-            // Check if already added to this DMA
-            if (!grouped[dma].find(i => i.id === investor.id)) {
-              grouped[dma].push({
-                ...investor,
-                zip_count: matchingZips.length,
-                market_type: marketType || 'dma_level',
-              });
-            }
-          }
-        });
-      });
-
-      return grouped;
-    },
+const dmaToInvestorIds: Record<string, string[]> = useMemo(() => {
+  const map: Record<string, Set<string>> = {};
+  dmas.forEach((d) => {
+    const ids = (d.investor_ids || []).filter((id: string) => !nationalIdsSet.has(id));
+    if (!map[d.dma]) map[d.dma] = new Set<string>();
+    ids.forEach((id: string) => map[d.dma].add(id));
   });
+  return Object.fromEntries(
+    Object.entries(map).map(([k, v]) => [k, Array.from(v)])
+  );
+}, [dmas, nationalIdsSet]);
 
-  const isLoading = isLoadingDmas || isLoadingInvestors;
+const allInvestorIds = useMemo(() => {
+  const s = new Set<string>();
+  Object.values(dmaToInvestorIds).forEach((arr) => arr.forEach((id) => s.add(id)));
+  return Array.from(s);
+}, [dmaToInvestorIds]);
+
+// Fetch details for needed investors in one query
+const { data: investorDetails, isLoading: isLoadingInvestors } = useQuery({
+  queryKey: ['investors-detail-by-state-dmas', stateCode, allInvestorIds],
+  enabled: allInvestorIds.length > 0,
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('investors')
+      .select(`
+        id,
+        company_name,
+        main_poc,
+        tier,
+        status,
+        coverage_type,
+        markets!inner(
+          market_type
+        )
+      `)
+      .eq('status', 'active')
+      .in('id', allInvestorIds)
+      .neq('markets.market_type', 'full_coverage');
+
+    if (error) throw error;
+
+    return (
+      data?.map((inv: any) => ({
+        id: inv.id,
+        company_name: inv.company_name,
+        main_poc: inv.main_poc,
+        tier: inv.tier,
+        status: inv.status,
+        coverage_type: inv.coverage_type,
+        market_type: inv.markets?.[0]?.market_type || 'dma_level',
+      })) || []
+    );
+  },
+});
+
+// Build DMA -> investor objects map
+const dmaInvestors: Record<string, any[]> = useMemo(() => {
+  const map: Record<string, any[]> = {};
+  const byId = new Map((investorDetails || []).map((i: any) => [i.id, i]));
+  Object.entries(dmaToInvestorIds).forEach(([dma, ids]) => {
+    map[dma] = ids.map((id) => byId.get(id)).filter(Boolean) as any[];
+  });
+  return map;
+}, [investorDetails, dmaToInvestorIds]);
+
+const isLoading = isLoadingInvestors;
 
   const getTierColor = (tier: number) => {
     if (tier === 1) return "bg-amber-500";
@@ -214,9 +202,9 @@ export function CoverageInfoPanel({ stateCode, stateData, onClose }: CoverageInf
               <Skeleton className="h-16 w-full mb-2" />
               <Skeleton className="h-16 w-full mb-2" />
             </>
-          ) : dmaData && dmaData.length > 0 ? (
+          ) : dmas && dmas.length > 0 ? (
             <Accordion type="single" collapsible className="space-y-2">
-              {dmaData.map((dma: any) => {
+              {dmas.map((dma: any) => {
                 const investors = dmaInvestors?.[dma.dma] || [];
                 
                 return (
