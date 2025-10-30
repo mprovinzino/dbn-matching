@@ -134,9 +134,15 @@ export function CoverageMapView({
         ? validCoverage.filter(dma => dma.investor_ids.includes(highlightInvestorId))
         : validCoverage;
 
+      // Filter state-level coverage by highlighted investor
+      const filteredStateLevel = highlightInvestorId
+        ? stateLevelCoverage.filter((item) => item.investor_id === highlightInvestorId)
+        : stateLevelCoverage;
+
       console.log('🎯 After filtering:', {
         filteredCount: filteredCoverage.length,
         uniqueStates: [...new Set(filteredCoverage.map(d => d.state))],
+        stateLevelCount: filteredStateLevel.length,
       });
 
       // Build dominant state overrides for multi-state DMAs
@@ -197,6 +203,18 @@ export function CoverageMapView({
         acc[stateKey].dmas.push(dma);
         return acc;
       }, {} as Record<string, { investorIdSet: Set<string>; dmas: DmaCoverageData[] }>);
+
+      // Merge state-level investors into the stateData (union of DMA + state-level)
+      filteredStateLevel.forEach(item => {
+        const stateKey = item.state;
+        if (!stateData[stateKey]) {
+          stateData[stateKey] = {
+            investorIdSet: new Set<string>(),
+            dmas: [],
+          };
+        }
+        stateData[stateKey].investorIdSet.add(item.investor_id);
+      });
 
       // Convert Set size to totalInvestors count
       const stateDataWithCounts = Object.entries(stateData).reduce((acc, [state, data]) => {
@@ -374,166 +392,7 @@ export function CoverageMapView({
       source.setData(featureCollection as any);
     }
 
-    // Add state-level coverage markers (green circles for full state coverage)
-    const filteredStateLevel = highlightInvestorId
-      ? stateLevelCoverage.filter((item) => item.investor_id === highlightInvestorId)
-      : stateLevelCoverage;
-
-    const stateInvestorCounts = filteredStateLevel.reduce((acc, item) => {
-      if (!acc[item.state]) {
-        acc[item.state] = { count: 0, investors: [] };
-      }
-      acc[item.state].count++;
-      acc[item.state].investors.push(item);
-      return acc;
-    }, {} as Record<string, { count: number; investors: StateLevelCoverageData[] }>);
-
-    const stateLevelFeatures = Object.entries(stateInvestorCounts)
-      .map(([state, data]) => {
-        const coords = stateCoordinates[state];
-        if (!coords) return null;
-        
-        return {
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: coords },
-          properties: {
-            state,
-            totalInvestors: data.count,
-            isStateLevel: true,
-          },
-        };
-      })
-      .filter(Boolean);
-
-    const stateLevelSourceId = 'state-level-coverage';
-    const stateLevelCircleId = 'state-level-markers';
-    const stateLevelLabelId = 'state-level-labels';
-
-    // Rebuild state-level source when focusing on a single investor
-    if (mapInstance.getSource(stateLevelSourceId) && highlightInvestorId) {
-      if (mapInstance.getLayer(stateLevelLabelId)) mapInstance.removeLayer(stateLevelLabelId);
-      if (mapInstance.getLayer(stateLevelCircleId)) mapInstance.removeLayer(stateLevelCircleId);
-      mapInstance.removeSource(stateLevelSourceId);
-    }
-
-    if (!mapInstance.getSource(stateLevelSourceId)) {
-      mapInstance.addSource(stateLevelSourceId, {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: stateLevelFeatures as any,
-        },
-      });
-
-      // Green circles for state-level coverage
-      mapInstance.addLayer({
-        id: stateLevelCircleId,
-        type: 'circle',
-        source: stateLevelSourceId,
-        paint: {
-          'circle-radius': [
-            'interpolate',
-            ['linear'],
-            ['get', 'totalInvestors'],
-            1, 16,
-            5, 24,
-            10, 32,
-          ],
-          'circle-color': '#10b981', // Green
-          'circle-opacity': 0.8,
-          'circle-stroke-width': 3,
-          'circle-stroke-color': '#ffffff',
-        },
-      });
-
-      // Labels for state-level
-      mapInstance.addLayer({
-        id: stateLevelLabelId,
-        type: 'symbol',
-        source: stateLevelSourceId,
-        layout: {
-          'text-field': ['to-string', ['get', 'totalInvestors']],
-          'text-size': 13,
-          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-        },
-        paint: {
-          'text-color': '#ffffff',
-        },
-      });
-
-      // Hover interactions for state-level markers
-      mapInstance.on('mouseenter', stateLevelCircleId, () => {
-        mapInstance.getCanvas().style.cursor = 'pointer';
-      });
-      
-      mapInstance.on('mouseleave', stateLevelCircleId, () => {
-        mapInstance.getCanvas().style.cursor = '';
-      });
-
-      // Click to show state-level investor details
-      mapInstance.on('click', stateLevelCircleId, (e) => {
-        const feature = e.features?.[0];
-        const state = feature && (feature.properties as any)?.state;
-        const coords = feature && (feature.geometry as any)?.coordinates as [number, number] | undefined;
-        if (!state || !coords) return;
-
-        const stateInvestors = stateInvestorCounts[state]?.investors || [];
-        
-        const html = `
-          <div style="padding: 12px; max-width: 350px;">
-            <h3 style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">${state}</h3>
-            <div style="font-size: 11px; color: #10b981; font-weight: 600; margin-bottom: 8px;">
-              STATE-LEVEL COVERAGE
-            </div>
-            <p style="font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">
-              ${stateInvestors.length} investor${stateInvestors.length !== 1 ? 's' : ''} covering entire state
-            </p>
-            <div style="max-height: 200px; overflow-y: auto;">
-              ${stateInvestors.map(inv => `
-                <div style="font-size: 11px; padding: 4px 0; color: #374151; border-bottom: 1px solid #e5e7eb;">
-                  <strong>${inv.investor_name}</strong>
-                  <div style="font-size: 10px; color: #6b7280;">
-                    ${inv.market_type} • Tier ${inv.tier}
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-
-        new mapboxgl.Popup({ offset: 25, closeButton: true, closeOnClick: true, maxWidth: '350px' })
-          .setLngLat(coords)
-          .setHTML(html)
-          .addTo(mapInstance);
-      });
-    } else {
-      const source = mapInstance.getSource(stateLevelSourceId) as mapboxgl.GeoJSONSource;
-      source.setData({
-        type: 'FeatureCollection',
-        features: stateLevelFeatures as any,
-      });
-    }
-
-
-      // Handle DMA click from popup
-      const handleDmaClick = (e: any) => {
-        const state = e.detail;
-        const stateInfo = stateData[state];
-        if (stateInfo) {
-          const investorIds = Array.from(stateInfo.investorIdSet || []);
-          const stateLevelData = filteredStateLevel.filter(item => item.state === state);
-          onDmaClick(state, {
-            investorIds,
-            coverage: stateInfo.dmas,
-            stateLevelData
-          });
-        }
-      };
-      window.addEventListener('dma-click', handleDmaClick);
-
-      return () => {
-        window.removeEventListener('dma-click', handleDmaClick);
-      };
+    // State-level markers removed - now merged into main state circles
     };
 
     updateMapData();

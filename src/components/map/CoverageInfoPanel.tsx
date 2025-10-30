@@ -21,18 +21,28 @@ interface CoverageInfoPanelProps {
 export function CoverageInfoPanel({ stateCode, stateData, onClose }: CoverageInfoPanelProps) {
   const navigate = useNavigate();
 
-  // Calculate overview from the passed state data (same data the map uses)
+  // Calculate overview from the passed state data (unified union of DMA + state-level)
+  const dmaIds = new Set(stateData.investorIds);
+  const stateLevelIds = new Set(stateData.stateLevelData.map(s => s.investor_id));
+  const unionIds = new Set([...dmaIds, ...stateLevelIds]);
+
+  const nationalIds = new Set(
+    stateData.stateLevelData
+      .filter(s => s.market_type === 'full_coverage')
+      .map(s => s.investor_id)
+  );
+
   const overview = {
-    total: stateData.investorIds.length,
-    national: stateData.stateLevelData.filter(s => s.market_type === 'full_coverage').length,
-    stateLevel: stateData.investorIds.length - stateData.stateLevelData.filter(s => s.market_type === 'full_coverage').length,
+    total: unionIds.size,
+    national: nationalIds.size,
+    stateLevel: unionIds.size - nationalIds.size,
   };
 
-  console.log(`📊 Side Panel ${stateCode} (using map data):`, {
+  console.log(`📊 Side Panel ${stateCode} (unified count):`, {
     total: overview.total,
     national: overview.national,
     stateLevel: overview.stateLevel,
-    uniqueIds: stateData.investorIds,
+    unionIds: Array.from(unionIds),
   });
 
   // Fetch DMAs in this state
