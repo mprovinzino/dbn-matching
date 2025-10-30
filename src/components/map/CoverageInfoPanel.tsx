@@ -107,28 +107,46 @@ const { data: dmaInvestorsMap, isLoading: isLoadingDmaInvestors } = useQuery({
         zip_count: 0,
         status: 'active',
       }));
-    
-    // Merge: For each DMA, combine zip-code-based + state-level investors
+
+    // Also include national (full_coverage) investors so DMA counts are never zero
+    const nationalInvestors = stateData.stateLevelData
+      .filter((s: any) => s.market_type === 'full_coverage')
+      .map((s: any) => ({
+        id: s.investor_id,
+        company_name: s.investor_name,
+        main_poc: '',
+        market_type: s.market_type,
+        tier: s.tier,
+        coverage_type: 'national',
+        zip_count: 0,
+        status: 'active',
+      }));
+
+    // Merge: For each DMA, combine zip-code-based + state-level + national investors
     const finalMap: Record<string, any[]> = {};
     dmas.forEach((d) => {
       const zipCodeInvestors = dmaSpecificMap[d.dma] || [];
-      
-      // Union of zip-code and state-level, deduplicated by ID
       const investorMap = new Map();
       zipCodeInvestors.forEach(inv => investorMap.set(inv.id, inv));
       stateLevelInvestors.forEach(inv => {
-        if (!investorMap.has(inv.id)) {
-          investorMap.set(inv.id, inv);
-        }
+        if (!investorMap.has(inv.id)) investorMap.set(inv.id, inv);
       });
-      
+      nationalInvestors.forEach(inv => {
+        if (!investorMap.has(inv.id)) investorMap.set(inv.id, inv);
+      });
       finalMap[d.dma] = Array.from(investorMap.values());
     });
-    
-    console.log('🧾 Per-DMA counts (with state-level):', 
+
+    console.log('🧾 Per-DMA counts (with state + national):',
       Object.fromEntries(Object.entries(finalMap).map(([k, v]) => [k, v.length]))
     );
-    
+    console.log('🧩 Merge sources:', {
+      state: stateCode,
+      stateLevel: stateLevelInvestors.length,
+      national: nationalInvestors.length,
+      dmas: dmas.length,
+    });
+
     return finalMap;
   },
   staleTime: 30_000,
