@@ -9,7 +9,7 @@ interface CoverageMapViewProps {
   coverage: DmaCoverageData[];
   stateLevelCoverage: StateLevelCoverageData[];
   searchQuery: string;
-  onDmaClick: (dmaName: string) => void;
+  onDmaClick: (stateCode: string, stateData: { investorIds: string[], coverage: any[], stateLevelData: any[] }) => void;
   highlightInvestorId?: string | null;
 }
 
@@ -340,7 +340,16 @@ export function CoverageMapView({
         const feature = e.features?.[0];
         const state = feature && (feature.properties as any)?.state;
         if (state && onDmaClick) {
-          onDmaClick(state);
+          const stateInfo = stateData[state];
+          if (stateInfo) {
+            const investorIds = Array.from(stateInfo.investorIdSet || []);
+            const stateLevelData = filteredStateLevel.filter(item => item.state === state);
+            onDmaClick(state, {
+              investorIds,
+              coverage: stateInfo.dmas,
+              stateLevelData
+            });
+          }
         }
       });
 
@@ -348,7 +357,16 @@ export function CoverageMapView({
         const feature = e.features?.[0];
         const state = feature && (feature.properties as any)?.state;
         if (state && onDmaClick) {
-          onDmaClick(state);
+          const stateInfo = stateData[state];
+          if (stateInfo) {
+            const investorIds = Array.from(stateInfo.investorIdSet || []);
+            const stateLevelData = filteredStateLevel.filter(item => item.state === state);
+            onDmaClick(state, {
+              investorIds,
+              coverage: stateInfo.dmas,
+              stateLevelData
+            });
+          }
         }
       });
     } else {
@@ -499,7 +517,17 @@ export function CoverageMapView({
 
       // Handle DMA click from popup
       const handleDmaClick = (e: any) => {
-        onDmaClick(e.detail);
+        const state = e.detail;
+        const stateInfo = stateData[state];
+        if (stateInfo) {
+          const investorIds = Array.from(stateInfo.investorIdSet || []);
+          const stateLevelData = filteredStateLevel.filter(item => item.state === state);
+          onDmaClick(state, {
+            investorIds,
+            coverage: stateInfo.dmas,
+            stateLevelData
+          });
+        }
       };
       window.addEventListener('dma-click', handleDmaClick);
 
