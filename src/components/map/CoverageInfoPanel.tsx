@@ -63,76 +63,40 @@ const dmas = useMemo(() => {
   });
 }, [stateData.coverage]);
 
-// For per-DMA lists, exclude national (full_coverage) investors
-const nationalIdsSet = nationalIds;
-
-const dmaToInvestorIds: Record<string, string[]> = useMemo(() => {
-  const map: Record<string, Set<string>> = {};
-  dmas.forEach((d) => {
-    const ids = (d.investor_ids || []).filter((id: string) => !nationalIdsSet.has(id));
-    if (!map[d.dma]) map[d.dma] = new Set<string>();
-    ids.forEach((id: string) => map[d.dma].add(id));
-  });
-  return Object.fromEntries(
-    Object.entries(map).map(([k, v]) => [k, Array.from(v)])
-  );
-}, [dmas, nationalIdsSet]);
-
-const allInvestorIds = useMemo(() => {
-  const s = new Set<string>();
-  Object.values(dmaToInvestorIds).forEach((arr) => arr.forEach((id) => s.add(id)));
-  return Array.from(s);
-}, [dmaToInvestorIds]);
-
-// Fetch details for needed investors in one query
-const { data: investorDetails, isLoading: isLoadingInvestors } = useQuery({
-  queryKey: ['investors-detail-by-state-dmas', stateCode, allInvestorIds],
-  enabled: allInvestorIds.length > 0,
+// For per-DMA investor lists, fetch via RPC to bypass RLS
+const { data: dmaInvestorsMap, isLoading: isLoadingDmaInvestors } = useQuery({
+  queryKey: ['state-dma-investors', stateCode, dmas.map(d => d.dma)],
+  enabled: dmas.length > 0,
   queryFn: async () => {
-    const { data, error } = await supabase
-      .from('investors')
-      .select(`
-        id,
-        company_name,
-        main_poc,
-        tier,
-        status,
-        coverage_type,
-        markets!inner(
-          market_type
-        )
-      `)
-      .eq('status', 'active')
-      .in('id', allInvestorIds)
-      .neq('markets.market_type', 'full_coverage');
-
-    if (error) throw error;
-
-    return (
-      data?.map((inv: any) => ({
-        id: inv.id,
-        company_name: inv.company_name,
-        main_poc: inv.main_poc,
-        tier: inv.tier,
-        status: inv.status,
-        coverage_type: inv.coverage_type,
-        market_type: inv.markets?.[0]?.market_type || 'dma_level',
-      })) || []
+    console.log('🧭 State', stateCode, 'DMAs:', dmas.map(d => d.dma));
+    const entries = await Promise.all(
+      dmas.map(async (d) => {
+        const { data, error } = await supabase.rpc('get_investors_by_dma', { dma_name: d.dma });
+        if (error) throw error;
+        const rows = (data || [])
+          .filter((row: any) => row.status === 'active')
+          .map((row: any) => ({
+            id: row.investor_id,
+            company_name: row.company_name,
+            main_poc: row.main_poc,
+            market_type: row.market_type,
+            tier: row.tier,
+            coverage_type: row.coverage_type,
+            zip_count: row.zip_count,
+            status: row.status,
+          }));
+        return [d.dma, rows] as const;
+      })
     );
+    const map: Record<string, any[]> = Object.fromEntries(entries);
+    console.log('🧾 Per-DMA counts:', Object.fromEntries(Object.entries(map).map(([k, v]) => [k, v.length])));
+    return map;
   },
+  staleTime: 30_000,
 });
 
-// Build DMA -> investor objects map
-const dmaInvestors: Record<string, any[]> = useMemo(() => {
-  const map: Record<string, any[]> = {};
-  const byId = new Map((investorDetails || []).map((i: any) => [i.id, i]));
-  Object.entries(dmaToInvestorIds).forEach(([dma, ids]) => {
-    map[dma] = ids.map((id) => byId.get(id)).filter(Boolean) as any[];
-  });
-  return map;
-}, [investorDetails, dmaToInvestorIds]);
-
-const isLoading = isLoadingInvestors;
+// Report loading state
+const isLoading = isLoadingDmaInvestors;
 
   const getTierColor = (tier: number) => {
     if (tier === 1) return "bg-amber-500";
@@ -205,7 +169,7 @@ const isLoading = isLoadingInvestors;
           ) : dmas && dmas.length > 0 ? (
             <Accordion type="single" collapsible className="space-y-2">
               {dmas.map((dma: any) => {
-                const investors = dmaInvestors?.[dma.dma] || [];
+                const investors = dmaInvestorsMap?.[dma.dma] || [];
                 
                 return (
                   <AccordionItem key={dma.dma} value={dma.dma} className="border rounded-lg">
