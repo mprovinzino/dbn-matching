@@ -65,11 +65,13 @@ const dmas = useMemo(() => {
 
 // For per-DMA investor lists, fetch via RPC to bypass RLS
 const { data: dmaInvestorsMap, isLoading: isLoadingDmaInvestors } = useQuery({
-  queryKey: ['state-dma-investors', stateCode, dmas.map(d => d.dma)],
+  queryKey: ['state-dma-investors', stateCode, dmas.map(d => d.dma), stateData.stateLevelData],
   enabled: dmas.length > 0,
   queryFn: async () => {
     console.log('🧭 State', stateCode, 'DMAs:', dmas.map(d => d.dma));
-    const entries = await Promise.all(
+    
+    // Fetch zip-code-based investors per DMA via RPC
+    const dmaSpecificEntries = await Promise.all(
       dmas.map(async (d) => {
         const { data, error } = await supabase.rpc('get_investors_by_dma', { dma_name: d.dma });
         if (error) throw error;
@@ -88,9 +90,46 @@ const { data: dmaInvestorsMap, isLoading: isLoadingDmaInvestors } = useQuery({
         return [d.dma, rows] as const;
       })
     );
-    const map: Record<string, any[]> = Object.fromEntries(entries);
-    console.log('🧾 Per-DMA counts:', Object.fromEntries(Object.entries(map).map(([k, v]) => [k, v.length])));
-    return map;
+    
+    const dmaSpecificMap: Record<string, any[]> = Object.fromEntries(dmaSpecificEntries);
+    
+    // Add state-level investors to EVERY DMA in this state
+    // (They cover the entire state, so they apply to all DMAs)
+    const stateLevelInvestors = stateData.stateLevelData
+      .filter((s: any) => s.market_type !== 'full_coverage') // Exclude national from DMA lists
+      .map((s: any) => ({
+        id: s.investor_id,
+        company_name: s.investor_name,
+        main_poc: '', // Not available in state-level data
+        market_type: s.market_type,
+        tier: s.tier,
+        coverage_type: 'state_level',
+        zip_count: 0,
+        status: 'active',
+      }));
+    
+    // Merge: For each DMA, combine zip-code-based + state-level investors
+    const finalMap: Record<string, any[]> = {};
+    dmas.forEach((d) => {
+      const zipCodeInvestors = dmaSpecificMap[d.dma] || [];
+      
+      // Union of zip-code and state-level, deduplicated by ID
+      const investorMap = new Map();
+      zipCodeInvestors.forEach(inv => investorMap.set(inv.id, inv));
+      stateLevelInvestors.forEach(inv => {
+        if (!investorMap.has(inv.id)) {
+          investorMap.set(inv.id, inv);
+        }
+      });
+      
+      finalMap[d.dma] = Array.from(investorMap.values());
+    });
+    
+    console.log('🧾 Per-DMA counts (with state-level):', 
+      Object.fromEntries(Object.entries(finalMap).map(([k, v]) => [k, v.length]))
+    );
+    
+    return finalMap;
   },
   staleTime: 30_000,
 });
