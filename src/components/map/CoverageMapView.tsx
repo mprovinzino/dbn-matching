@@ -145,52 +145,9 @@ export function CoverageMapView({
         stateLevelCount: filteredStateLevel.length,
       });
 
-      // Build dominant state overrides for multi-state DMAs
-      const uniqueDmas = [...new Set(filteredCoverage.map(d => d.dma))];
-      
-      if (uniqueDmas.length > 0) {
-        console.log('🔍 Querying dominant states for', uniqueDmas.length, 'DMAs');
-        
-        const { data: zipData, error } = await supabase
-          .from('zip_code_reference')
-          .select('dma, state')
-          .in('dma', uniqueDmas);
-
-        if (!error && zipData) {
-          // Count occurrences per (dma, state)
-          const dmaCounts: Record<string, Record<string, number>> = {};
-          
-          zipData.forEach(row => {
-            if (!dmaCounts[row.dma]) dmaCounts[row.dma] = {};
-            dmaCounts[row.dma][row.state] = (dmaCounts[row.dma][row.state] || 0) + 1;
-          });
-
-          // Find dominant state for each DMA
-          const overrideChanges: Array<{ dma: string; original: string; override: string }> = [];
-          
-          Object.entries(dmaCounts).forEach(([dma, stateCounts]) => {
-            const sortedStates = Object.entries(stateCounts).sort((a, b) => b[1] - a[1]);
-            const dominantState = sortedStates[0][0];
-            
-            // Find original state from coverage data
-            const originalState = filteredCoverage.find(d => d.dma === dma)?.state;
-            
-            if (dominantState && originalState && dominantState !== originalState) {
-              overrideChanges.push({ dma, original: originalState, override: dominantState });
-            }
-            
-            dmaStateOverrideRef.current[dma] = dominantState;
-          });
-
-          if (overrideChanges.length > 0) {
-            console.log('🔄 State overrides applied:', overrideChanges);
-          }
-        }
-      }
-
-      // Group by state (using overrides) and collect unique investor IDs
+      // Group by state using ORIGINAL states (no overrides) and collect unique investor IDs
       const stateData = filteredCoverage.reduce((acc, dma) => {
-        const stateKey = dmaStateOverrideRef.current[dma.dma] ?? dma.state;
+        const stateKey = dma.state; // Use original state, no overrides
         
         if (!acc[stateKey]) {
           acc[stateKey] = {
@@ -226,7 +183,7 @@ export function CoverageMapView({
       }, {} as Record<string, { totalInvestors: number; dmas: DmaCoverageData[] }>);
 
       const finalStates = Object.keys(stateDataWithCounts);
-      console.log('📊 State data aggregated with overrides:', {
+      console.log('📊 State data aggregated (no overrides):', {
         states: finalStates,
         stateData: Object.entries(stateDataWithCounts).map(([state, data]) => ({
           state,
@@ -243,7 +200,7 @@ export function CoverageMapView({
 
       console.log('🌍 National coverage:', { includeNational, nationalCount });
 
-      // Features for states with DMA-specific coverage (using overridden state coordinates)
+      // Features for states with coverage (using original state coordinates)
       const dmaSpecificFeatures = Object.entries(stateDataWithCounts)
         .map(([state, data]) => {
           const coords = stateCoordinates[state];
@@ -262,7 +219,7 @@ export function CoverageMapView({
           geometry: { type: 'Point', coordinates: coords },
           properties: {
             state,
-            totalInvestors: data.totalInvestors, // Already includes national investors
+            totalInvestors: data.totalInvestors,
           },
         } as const;
       })

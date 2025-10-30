@@ -38,10 +38,12 @@ export function CoverageInfoPanel({ stateCode, stateData, onClose }: CoverageInf
     stateLevel: unionIds.size - nationalIds.size,
   };
 
-  console.log(`📊 Side Panel ${stateCode} (unified count):`, {
+  console.log(`📊 Side Panel ${stateCode} counts:`, {
     total: overview.total,
     national: overview.national,
     stateLevel: overview.stateLevel,
+    dmaIds: Array.from(dmaIds),
+    stateLevelIds: Array.from(stateLevelIds),
     unionIds: Array.from(unionIds),
   });
 
