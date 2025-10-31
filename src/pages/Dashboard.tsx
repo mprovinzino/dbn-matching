@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Plus, Filter, FlaskConical, PauseCircle, LayoutGrid, List, ExternalLink, MapPin } from "lucide-react";
+import { Building2, Users, Plus, Filter, FlaskConical, PauseCircle, LayoutGrid, List, ExternalLink, MapPin, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InvestorCard } from "@/components/InvestorCard";
 import { InvestorDetailModal } from "@/components/InvestorDetailModal";
@@ -30,12 +30,25 @@ const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     loadInvestors();
+    checkAdminStatus();
   }, []);
+
+  const checkAdminStatus = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data } = await supabase.rpc('has_role', {
+      _user_id: user.id,
+      _role: 'admin'
+    });
+    setIsAdmin(data === true);
+  };
 
   // Check seed status and auto-import on first load
   useEffect(() => {
@@ -212,6 +225,16 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold">Clever Offers</h1>
             <p className="text-sm text-muted-foreground">Investor Management System</p>
           </div>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/admin')}
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Admin
+            </Button>
+          )}
         </div>
         </div>
       </header>

@@ -209,6 +209,30 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_seed_status: {
         Row: {
           created_at: string
@@ -329,8 +353,20 @@ export type Database = {
           tier: number
         }[]
       }
+      get_user_roles: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "team_member" | "viewer"
       coverage_type: "local" | "multi_state" | "state" | "national"
       investor_status: "active" | "paused" | "test" | "inactive"
       market_type: "direct_purchase" | "primary" | "secondary" | "full_coverage"
@@ -461,6 +497,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "team_member", "viewer"],
       coverage_type: ["local", "multi_state", "state", "national"],
       investor_status: ["active", "paused", "test", "inactive"],
       market_type: ["direct_purchase", "primary", "secondary", "full_coverage"],
