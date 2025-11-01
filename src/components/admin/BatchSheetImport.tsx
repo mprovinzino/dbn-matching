@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { parseGoogleSheetRow } from '@/utils/parseGoogleSheetRow';
+import { parseCsvInvestorData } from '@/utils/parseCsvInvestorData';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ParsedRow {
   rowNumber: number;
@@ -22,12 +24,94 @@ export function BatchSheetImport() {
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
+  const [importMode, setImportMode] = useState<'csv' | 'paste'>('csv');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [importResults, setImportResults] = useState<{ success: number; updated: number; failed: number }>({
     success: 0,
     updated: 0,
     failed: 0
   });
   const { toast } = useToast();
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid File',
+        description: 'Please upload a CSV file'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const text = await file.text();
+      const parsed = await parseCsvInvestorData(text, user.id);
+      
+      // Convert to ParsedRow format
+      const rows: ParsedRow[] = parsed.map((csvRow, index) => ({
+        rowNumber: index + 1,
+        data: {
+          company_name: csvRow.data.companyName,
+          poc_name: csvRow.data.mainPoc,
+          hubspot_url: csvRow.data.hubspotUrl || '',
+          tier: csvRow.data.tier,
+          weekly_cap: csvRow.data.weeklyCap,
+          cold_accepts: csvRow.data.buyBox.leadTypes?.some(lt => 
+            lt.toLowerCase().includes('cold')
+          ) || false,
+          coverage_type: csvRow.data.coverageType,
+          property_types: csvRow.data.buyBox.propertyTypes || [],
+          lead_types: csvRow.data.buyBox.leadTypes || [],
+          condition_types: csvRow.data.buyBox.conditionTypes || [],
+          timeframe: csvRow.data.buyBox.timeframe || [],
+          year_built_min: csvRow.data.buyBox.yearBuiltMin,
+          year_built_max: csvRow.data.buyBox.yearBuiltMax,
+          price_min: csvRow.data.buyBox.priceMin,
+          price_max: csvRow.data.buyBox.priceMax,
+          notes: csvRow.data.buyBox.notes,
+          primary_states: csvRow.data.markets
+            .filter(m => m.type === 'primary')
+            .flatMap(m => [...(m.states || []), ...(m.zipCodes || [])]),
+          secondary_states: csvRow.data.markets
+            .filter(m => m.type === 'secondary')
+            .flatMap(m => [...(m.states || []), ...(m.zipCodes || [])]),
+          direct_purchase_states: csvRow.data.markets
+            .filter(m => m.type === 'direct_purchase')
+            .flatMap(m => [...(m.states || []), ...(m.zipCodes || [])])
+        },
+        status: csvRow.status,
+        messages: csvRow.messages,
+        existingInvestorId: csvRow.existingInvestorId
+      }));
+
+      setParsedRows(rows);
+      setStep(2);
+      
+      toast({
+        title: 'CSV Parsed',
+        description: `Successfully parsed ${rows.length} rows`
+      });
+    } catch (error) {
+      console.error('CSV parse error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Parse Error',
+        description: error.message || 'Failed to parse CSV file'
+      });
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleParse = async () => {
     setLoading(true);
@@ -280,7 +364,11 @@ export function BatchSheetImport() {
     setRawText('');
     setParsedRows([]);
     setStep(1);
+    setImportMode('csv');
     setImportResults({ success: 0, updated: 0, failed: 0 });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -313,37 +401,102 @@ export function BatchSheetImport() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Batch Import from Google Sheets</CardTitle>
+          <CardTitle>Batch Import Investors</CardTitle>
           <CardDescription>
-            Paste multiple rows from your Google Sheet. Each row should be tab-delimited with 18 columns.
+            Import investors from CSV file or paste data from Google Sheets
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Paste your Google Sheet rows here (one row per line)..."
-            value={rawText}
-            onChange={(e) => setRawText(e.target.value)}
-            rows={15}
-            className="font-mono text-sm"
-          />
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-4">
             <Button
-              onClick={handleParse}
-              disabled={!rawText.trim() || loading}
+              variant={importMode === 'csv' ? 'default' : 'outline'}
+              onClick={() => setImportMode('csv')}
+              className="flex-1"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Parsing...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Parse & Validate
-                </>
-              )}
+              <Upload className="w-4 h-4 mr-2" />
+              Upload CSV
+            </Button>
+            <Button
+              variant={importMode === 'paste' ? 'default' : 'outline'}
+              onClick={() => setImportMode('paste')}
+              className="flex-1"
+            >
+              Paste Data
             </Button>
           </div>
+
+          {importMode === 'csv' ? (
+            <div className="space-y-4">
+              <Alert>
+                <AlertDescription>
+                  Upload a CSV file exported from your investor spreadsheet. The system will automatically parse company info, buy box criteria, and market coverage.
+                </AlertDescription>
+              </Alert>
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="csv-upload"
+              />
+              
+              <label htmlFor="csv-upload" className="cursor-pointer">
+                <Button 
+                  disabled={loading}
+                  className="w-full"
+                  type="button"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Select CSV File
+                    </>
+                  )}
+                </Button>
+              </label>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Alert>
+                <AlertDescription>
+                  Paste data from Google Sheets. Each row should be tab-delimited with investor information.
+                </AlertDescription>
+              </Alert>
+              
+              <Textarea
+                placeholder="Paste your Google Sheet rows here (one row per line)..."
+                value={rawText}
+                onChange={(e) => setRawText(e.target.value)}
+                rows={15}
+                className="font-mono text-sm"
+              />
+              
+              <Button
+                onClick={handleParse}
+                disabled={!rawText.trim() || loading}
+                className="w-full"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Parse & Validate
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
