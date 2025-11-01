@@ -442,25 +442,24 @@ export function BatchSheetImport() {
                 id="csv-upload"
               />
               
-              <label htmlFor="csv-upload" className="cursor-pointer">
-                <Button 
-                  disabled={loading}
-                  className="w-full"
-                  type="button"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Select CSV File
-                    </>
-                  )}
-                </Button>
-              </label>
+              <Button 
+                disabled={loading}
+                className="w-full"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Select CSV File
+                  </>
+                )}
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">
