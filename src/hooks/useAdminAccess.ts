@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 
 export function useAdminAccess() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
     checkAdminAccess();
@@ -20,7 +18,6 @@ export function useAdminAccess() {
         console.log('No authenticated user found');
         setIsAdmin(false);
         setLoading(false);
-        navigate('/auth');
         return;
       }
 
@@ -36,21 +33,14 @@ export function useAdminAccess() {
       if (error) {
         console.error('Error checking admin access:', error);
         setIsAdmin(false);
-        navigate('/');
       } else {
         const isAdminUser = data === true;
         setIsAdmin(isAdminUser);
         console.log('Admin status:', isAdminUser);
-        
-        if (!isAdminUser) {
-          console.log('User is not admin, redirecting to home');
-          navigate('/');
-        }
       }
     } catch (error) {
       console.error('Error in admin check:', error);
       setIsAdmin(false);
-      navigate('/');
     } finally {
       setLoading(false);
     }
