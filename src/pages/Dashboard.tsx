@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Dashboard = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [investors, setInvestors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,9 +41,27 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadInvestors();
-    checkAdminStatus();
-  }, []);
+    // Check authentication
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+        loadInvestors();
+        checkAdminStatus();
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -241,6 +261,11 @@ const Dashboard = () => {
 
   const sortedInvestors = getSortedInvestors();
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
   const stats = {
     total: investors.length,
     active: investors.filter(i => i.status === 'active').length,
@@ -248,7 +273,7 @@ const Dashboard = () => {
     paused: investors.filter(i => i.status === 'paused').length,
   };
 
-  if (loading || importProgress) {
+  if (!user || loading || importProgress) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -274,16 +299,25 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold">Clever Offers</h1>
             <p className="text-sm text-muted-foreground">Investor Management System</p>
           </div>
-          {isAdmin && (
+          <div className="flex gap-2">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/admin')}
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/admin')}
+              onClick={handleSignOut}
             >
-              <Shield className="h-4 w-4 mr-2" />
-              Admin
+              Sign Out
             </Button>
-          )}
+          </div>
         </div>
         </div>
       </header>

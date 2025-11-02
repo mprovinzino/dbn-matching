@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, Upload, Users, Database, Activity } from 'lucide-react';
@@ -6,6 +9,16 @@ import { BatchSheetImport } from '@/components/admin/BatchSheetImport';
 
 const Admin = () => {
   const { isAdmin, loading } = useAdminAccess();
+  const navigate = useNavigate();
+
+  // Check authentication
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+  }, [navigate]);
 
   if (loading) {
     return (

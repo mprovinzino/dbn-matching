@@ -19,6 +19,20 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
 
+    // Validate email domain
+    const allowedDomains = ['@listwithclever.com', '@movewithclever.com'];
+    const emailDomain = email.substring(email.lastIndexOf('@'));
+    
+    if (!allowedDomains.some(domain => emailDomain.toLowerCase() === domain.toLowerCase())) {
+      setLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Access Restricted",
+        description: "Only @listwithclever.com and @movewithclever.com email addresses are allowed.",
+      });
+      return;
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import type { User } from "@supabase/supabase-js";
 import { MapControls } from "@/components/map/MapControls";
 import { CoverageMapView } from "@/components/map/CoverageMapView";
 import { CoverageInfoPanel } from "@/components/map/CoverageInfoPanel";
@@ -12,7 +13,29 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function CoverageMap() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
   const investorParam = searchParams.get("investor");
+
+  // Check authentication
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const [searchInput, setSearchInput] = useState("");
   // Query used to actually filter the map (set only on selection)
@@ -25,6 +48,10 @@ export default function CoverageMap() {
   const [totalInvestors, setTotalInvestors] = useState(0);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(investorParam);
   const [selectedInvestorName, setSelectedInvestorName] = useState<string | null>(null);
+
+  if (!user) {
+    return null;
+  }
 
   // Debounce the actual filter query (not the input typing)
   useEffect(() => {
