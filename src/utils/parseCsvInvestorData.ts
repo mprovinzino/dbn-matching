@@ -167,33 +167,50 @@ function parseMarketData(marketText: string): { states: string[], zipCodes: stri
   let inZipSection = false;
   
   for (const line of lines) {
-    if (line.startsWith('Full States:')) {
+    const lineLower = line.toLowerCase();
+    
+    if (lineLower.startsWith('full states:')) {
       inStatesSection = true;
       inZipSection = false;
-      const statesLine = line.substring('Full States:'.length).trim();
+      const statesLine = line.substring(line.indexOf(':') + 1).trim();
       if (statesLine && statesLine !== '---') {
-        // Handle states on the same line
-        const states = statesLine.split(',').map(s => s.trim()).filter(s => s.length === 2);
+        // Handle states on the same line (comma-separated or single state)
+        const states = statesLine.split(',').map(s => s.trim().toUpperCase()).filter(s => s.length === 2 && /^[A-Z]{2}$/.test(s));
         result.states.push(...states);
       }
-    } else if (line.startsWith('Zip Codes:')) {
+    } else if (lineLower.startsWith('zip codes:')) {
       inStatesSection = false;
       inZipSection = true;
-      const zipLine = line.substring('Zip Codes:'.length).trim();
+      const zipLine = line.substring(line.indexOf(':') + 1).trim();
       if (zipLine && zipLine !== '---') {
         // Handle zips on the same line
         const zips = zipLine.split(',').map(z => z.trim()).filter(z => /^\d{5}$/.test(z));
         result.zipCodes.push(...zips);
       }
     } else if (inStatesSection && line && line !== '---') {
-      // State abbreviation (2 letters)
-      if (line.length === 2 && /^[A-Z]{2}$/.test(line)) {
-        result.states.push(line);
+      // State abbreviation (2 letters, case-insensitive)
+      const upperLine = line.toUpperCase();
+      if (upperLine.length === 2 && /^[A-Z]{2}$/.test(upperLine)) {
+        result.states.push(upperLine);
       }
     } else if (inZipSection && line && line !== '---') {
       // Zip codes (comma-separated or individual)
       const zips = line.split(',').map(z => z.trim()).filter(z => /^\d{5}$/.test(z));
       result.zipCodes.push(...zips);
+    } else if (!inStatesSection && !inZipSection && line && line !== '---') {
+      // If no section detected yet, try to auto-detect if it's states or zips
+      // Check if line contains only 2-letter codes (likely states)
+      const tokens = line.split(/[,\s]+/).map(t => t.trim().toUpperCase()).filter(Boolean);
+      const allStates = tokens.every(t => t.length === 2 && /^[A-Z]{2}$/.test(t));
+      if (allStates && tokens.length > 0) {
+        result.states.push(...tokens);
+      } else {
+        // Check if line contains 5-digit zip codes
+        const zips = line.split(/[,\s]+/).map(z => z.trim()).filter(z => /^\d{5}$/.test(z));
+        if (zips.length > 0) {
+          result.zipCodes.push(...zips);
+        }
+      }
     }
   }
   
