@@ -2,6 +2,7 @@ import { Building2, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InvestorDmaSummary } from "./InvestorDmaSummary";
 
 interface InvestorCardProps {
   investor: {
@@ -17,10 +18,15 @@ interface InvestorCardProps {
     status: 'active' | 'paused' | 'test' | 'inactive';
     status_reason: string | null;
   };
+  marketData?: {
+    market_type: string;
+    zip_codes?: string[];
+    states?: string[];
+  }[];
   onClick: () => void;
 }
 
-export function InvestorCard({ investor, onClick }: InvestorCardProps) {
+export function InvestorCard({ investor, marketData, onClick }: InvestorCardProps) {
   const getTierColor = (tier: number) => {
     if (tier <= 3) return "bg-[hsl(var(--tier-1-3))] hover:bg-[hsl(var(--tier-1-3))]/90";
     if (tier <= 6) return "bg-[hsl(var(--tier-4-6))] hover:bg-[hsl(var(--tier-4-6))]/90";
@@ -88,6 +94,14 @@ export function InvestorCard({ investor, onClick }: InvestorCardProps) {
             <span className="font-medium capitalize">
               {investor.coverage_type.replace(/_/g, ' ')}
             </span>
+          </div>
+          <div className="flex justify-between text-sm items-center">
+            <span className="text-muted-foreground">Markets:</span>
+            <InvestorDmaSummary 
+              investorId={investor.id}
+              coverageType={investor.coverage_type}
+              marketData={marketData}
+            />
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Weekly Cap:</span>

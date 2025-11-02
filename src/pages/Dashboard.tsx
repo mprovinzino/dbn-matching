@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Plus, Filter, FlaskConical, PauseCircle, LayoutGrid, List, ExternalLink, MapPin, Shield } from "lucide-react";
+import { Building2, Users, Plus, Filter, FlaskConical, PauseCircle, LayoutGrid, List, ExternalLink, MapPin, Shield, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InvestorCard } from "@/components/InvestorCard";
 import { InvestorDetailModal } from "@/components/InvestorDetailModal";
@@ -12,8 +12,10 @@ import { AddInvestorForm } from "@/components/AddInvestorForm";
 import { EditInvestorForm } from "@/components/EditInvestorForm";
 import { LeadMatchingSearch } from "@/components/LeadMatchingSearch";
 import { QuickAddFromSheet } from "@/components/QuickAddFromSheet";
+import { InvestorDmaSummary } from "@/components/InvestorDmaSummary";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Dashboard = () => {
   const [investors, setInvestors] = useState<any[]>([]);
@@ -31,6 +33,8 @@ const Dashboard = () => {
   const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("name-asc");
+  const [allMarkets, setAllMarkets] = useState<Record<string, any[]>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -97,6 +101,25 @@ const Dashboard = () => {
 
       if (error) throw error;
       setInvestors(data || []);
+      
+      // Fetch all markets for DMA summary
+      if (data && data.length > 0) {
+        const investorIds = data.map(inv => inv.id);
+        const { data: marketsData } = await supabase
+          .from('markets')
+          .select('investor_id, market_type, zip_codes, states')
+          .in('investor_id', investorIds);
+        
+        // Group markets by investor_id
+        const marketsByInvestor: Record<string, any[]> = {};
+        marketsData?.forEach(market => {
+          if (!marketsByInvestor[market.investor_id]) {
+            marketsByInvestor[market.investor_id] = [];
+          }
+          marketsByInvestor[market.investor_id].push(market);
+        });
+        setAllMarkets(marketsByInvestor);
+      }
     } catch (error) {
       console.error('Error loading investors:', error);
     } finally {
@@ -191,6 +214,32 @@ const Dashboard = () => {
     
     return matchesSearch && matchesStatus;
   });
+
+  const getSortedInvestors = () => {
+    const sorted = [...filteredInvestors];
+    
+    switch(sortBy) {
+      case 'name-asc':
+        return sorted.sort((a, b) => a.company_name.localeCompare(b.company_name));
+      case 'name-desc':
+        return sorted.sort((a, b) => b.company_name.localeCompare(a.company_name));
+      case 'tier-asc':
+        return sorted.sort((a, b) => a.tier - b.tier);
+      case 'tier-desc':
+        return sorted.sort((a, b) => b.tier - a.tier);
+      case 'weekly-cap':
+        return sorted.sort((a, b) => b.weekly_cap - a.weekly_cap);
+      case 'updated':
+        return sorted.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      case 'status':
+        const statusOrder = { active: 0, test: 1, paused: 2, inactive: 3 };
+        return sorted.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+      default:
+        return sorted;
+    }
+  };
+
+  const sortedInvestors = getSortedInvestors();
 
   const stats = {
     total: investors.length,
@@ -329,6 +378,21 @@ const Dashboard = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[200px]">
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Sort by..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+              <SelectItem value="tier-asc">Tier (Low to High)</SelectItem>
+              <SelectItem value="tier-desc">Tier (High to Low)</SelectItem>
+              <SelectItem value="weekly-cap">Weekly Cap (High to Low)</SelectItem>
+              <SelectItem value="updated">Recently Updated</SelectItem>
+              <SelectItem value="status">Status</SelectItem>
+            </SelectContent>
+          </Select>
           <div className="flex gap-2">
             <Button
               variant={viewMode === "tiles" ? "default" : "outline"}
@@ -368,10 +432,11 @@ const Dashboard = () => {
         {/* Investor Grid/List */}
         {investors.length > 0 && viewMode === "tiles" && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredInvestors.map((investor) => (
+            {sortedInvestors.map((investor) => (
               <InvestorCard
                 key={investor.id}
                 investor={investor}
+                marketData={allMarkets[investor.id]}
                 onClick={() => handleInvestorClick(investor)}
               />
             ))}
@@ -388,12 +453,13 @@ const Dashboard = () => {
                   <TableHead>Tier</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Coverage</TableHead>
+                  <TableHead>DMA Coverage</TableHead>
                   <TableHead>Weekly Cap</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvestors.map((investor) => (
+                {sortedInvestors.map((investor) => (
                   <TableRow 
                     key={investor.id} 
                     className="cursor-pointer hover:bg-muted/50"
@@ -418,6 +484,14 @@ const Dashboard = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="capitalize">{investor.coverage_type.replace('_', ' ')}</TableCell>
+                    <TableCell>
+                      <InvestorDmaSummary 
+                        investorId={investor.id}
+                        coverageType={investor.coverage_type}
+                        marketData={allMarkets[investor.id]}
+                        compact
+                      />
+                    </TableCell>
                     <TableCell>{investor.weekly_cap} leads/week</TableCell>
                     <TableCell className="text-right">
                       <Button 
