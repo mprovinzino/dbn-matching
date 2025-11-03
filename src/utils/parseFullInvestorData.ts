@@ -16,6 +16,7 @@ export interface ExcelInvestorRow {
   'Main POC': string;
   'ID': number;
   'Coverage Type': string;
+  'Status': string;
 }
 
 export interface ParsedInvestorData {
@@ -29,6 +30,7 @@ export interface ParsedInvestorData {
   coldAccepts: boolean;
   mainPoc: string;
   coverageType: 'national' | 'multi_state' | 'state' | 'local';
+  status: 'active' | 'paused' | 'test';
   buyBox: {
     propertyTypes: string[];
     onMarketStatus: string[];
@@ -169,6 +171,13 @@ function normalizeCoverageType(coverageType: string): 'national' | 'multi_state'
   return 'local';
 }
 
+function normalizeStatus(statusString: string): 'active' | 'paused' | 'test' {
+  const normalized = statusString.toLowerCase().trim();
+  if (normalized === 'paused') return 'paused';
+  if (normalized === 'test') return 'test';
+  return 'active';
+}
+
 export function parseExcelInvestorData(row: ExcelInvestorRow): ParsedInvestorData {
   const primaryMarkets = row['Primary Markets'] ? parseMarketField(row['Primary Markets']) : { states: [], zipCodes: [] };
   const secondaryMarkets = row['Secondary Markets'] ? parseMarketField(row['Secondary Markets']) : { states: [], zipCodes: [] };
@@ -184,6 +193,7 @@ export function parseExcelInvestorData(row: ExcelInvestorRow): ParsedInvestorDat
     coldAccepts: row['Cold'] === 'YES',
     mainPoc: extractMainPocName(row['Main POC'] || ''),
     coverageType: normalizeCoverageType(row['Coverage Type'] || 'single-state'),
+    status: normalizeStatus(row['Status'] || 'active'),
     buyBox: parseBuyBoxField(row['Buy Box'] || ''),
     markets: {
       primary: primaryMarkets,

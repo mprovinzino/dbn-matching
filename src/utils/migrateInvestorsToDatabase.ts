@@ -48,6 +48,7 @@ export async function migrateInvestorsToDatabase(userId: string): Promise<Migrat
         offer_types: testInvestor.offerTypes,
         tags: testInvestor.tags,
         freeze_reason: testInvestor.freezeReason,
+        status: testInvestor.status,
       })
       .select()
       .single();
@@ -96,6 +97,7 @@ export async function migrateInvestorsToDatabase(userId: string): Promise<Migrat
             offer_types: investor.offerTypes,
             tags: investor.tags,
             freeze_reason: investor.freezeReason,
+            status: investor.status,
           })
           .select()
           .single();

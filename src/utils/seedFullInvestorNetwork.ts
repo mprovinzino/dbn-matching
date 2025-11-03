@@ -33,6 +33,7 @@ export async function seedFullInvestorNetwork(userId: string): Promise<SeedResul
             weekly_cap: investor.weeklyCap,
             cold_accepts: investor.coldAccepts,
             coverage_type: investor.coverageType,
+            status: investor.status,
           }])
           .select()
           .single();
