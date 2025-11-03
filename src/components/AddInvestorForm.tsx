@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { investorFormSchema } from "@/lib/investorValidation";
 
 interface AddInvestorFormProps {
   open: boolean;
@@ -71,6 +72,19 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      // Validate form data
+      const validation = investorFormSchema.safeParse(formData);
+      if (!validation.success) {
+        const firstError = validation.error.errors[0];
+        toast({
+          title: "Validation Error",
+          description: firstError.message,
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
       // Get the current authenticated user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
