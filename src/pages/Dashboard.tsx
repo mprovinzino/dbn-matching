@@ -233,7 +233,12 @@ const Dashboard = () => {
 
         {/* Stats */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-          <Card className="bg-muted/30">
+          <Card 
+            className={`border-l-2 border-l-muted-foreground bg-muted/30 cursor-pointer transition-all hover:shadow-md ${
+              statusFilter === null ? 'ring-2 ring-muted-foreground' : ''
+            }`}
+            onClick={() => setStatusFilter(null)}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
               <CardTitle className="text-sm font-medium">Total Investors</CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -241,7 +246,7 @@ const Dashboard = () => {
             <CardContent className="p-4 pt-0">
               <div className="text-xl font-bold">{stats.total}</div>
               <p className="text-xs text-muted-foreground">
-                {stats.total === 0 ? 'No investors yet' : 'In your network'}
+                {statusFilter === null ? 'Showing all investors' : 'Click to show all'}
               </p>
             </CardContent>
           </Card>
