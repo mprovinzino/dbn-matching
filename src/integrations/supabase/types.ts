@@ -114,6 +114,7 @@ export type Database = {
           company_name: string
           coverage_type: Database["public"]["Enums"]["coverage_type"]
           created_at: string
+          freeze_reason: string | null
           hubspot_url: string | null
           id: string
           main_poc: string
@@ -133,6 +134,7 @@ export type Database = {
           company_name: string
           coverage_type: Database["public"]["Enums"]["coverage_type"]
           created_at?: string
+          freeze_reason?: string | null
           hubspot_url?: string | null
           id?: string
           main_poc: string
@@ -152,6 +154,7 @@ export type Database = {
           company_name?: string
           coverage_type?: Database["public"]["Enums"]["coverage_type"]
           created_at?: string
+          freeze_reason?: string | null
           hubspot_url?: string | null
           id?: string
           main_poc?: string
