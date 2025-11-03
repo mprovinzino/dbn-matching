@@ -25,12 +25,8 @@ const Index = () => {
           <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             Clever Offers
           </h1>
-          <p className="text-2xl text-muted-foreground mb-2">
-            Investor Management System
-          </p>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl">
-            Match real estate investors with property leads based on geographic coverage,
-            buy box criteria, and tier rankings
+          <p className="text-2xl text-muted-foreground mb-8">
+            DBN AMP 2.0
           </p>
           <div className="flex gap-4">
             <Button size="lg" onClick={() => navigate("/auth")}>
