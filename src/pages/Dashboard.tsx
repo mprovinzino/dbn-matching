@@ -29,8 +29,6 @@ const Dashboard = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedBuyBox, setSelectedBuyBox] = useState<any>(null);
   const [selectedMarkets, setSelectedMarkets] = useState<any[]>([]);
-  const [importProgress, setImportProgress] = useState<string | null>(null);
-  const [hasCheckedForSeed, setHasCheckedForSeed] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -74,42 +72,6 @@ const Dashboard = () => {
     setIsAdmin(data === true);
   };
 
-  // Check seed status and auto-import on first load
-  useEffect(() => {
-    const checkSeedStatus = async () => {
-      if (hasCheckedForSeed || loading) return;
-
-      setHasCheckedForSeed(true);
-
-      try {
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Check if user has been seeded
-        const { data: seedStatus, error: seedError } = await supabase
-          .from('user_seed_status')
-          .select('seeded')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (seedError) {
-          console.error('Error checking seed status:', seedError);
-          return;
-        }
-
-        // If not seeded yet, trigger import
-        if (!seedStatus || !seedStatus.seeded) {
-          console.log('User not seeded, starting auto-import...');
-          await handleAutoImport();
-        }
-      } catch (error) {
-        console.error('Error in seed check:', error);
-      }
-    };
-
-    checkSeedStatus();
-  }, [loading, hasCheckedForSeed]);
 
   const loadInvestors = async () => {
     try {
@@ -147,60 +109,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleAutoImport = async () => {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        console.error('No authenticated user for auto-import');
-        return;
-      }
-      
-      setImportProgress("Clearing existing data and importing full investor network...");
-      console.log('Starting migration for user:', user.id);
-      
-      const { migrateInvestorsToDatabase } = await import('@/utils/migrateInvestorsToDatabase');
-      const result = await migrateInvestorsToDatabase(user.id);
-      
-      if (result.success) {
-        // Mark user as seeded
-        const { error: seedError } = await supabase
-          .from('user_seed_status')
-          .upsert({
-            user_id: user.id,
-            seeded: true,
-            seeded_at: new Date().toISOString(),
-          });
-
-        if (seedError) {
-          console.error('Error updating seed status:', seedError);
-        }
-
-        toast({
-          title: "Import Successful",
-          description: `Successfully imported ${result.successCount} investors from your network`,
-        });
-        await loadInvestors();
-      } else {
-        toast({
-          title: "Import Completed with Errors",
-          description: `Imported ${result.successCount} investors, ${result.failedCount} failed`,
-          variant: "destructive",
-        });
-        console.error('Import errors:', result.errors);
-      }
-      
-      setImportProgress(null);
-    } catch (error) {
-      console.error('Error during auto-import:', error);
-      setImportProgress(null);
-      toast({
-        title: "Import Error",
-        description: "Failed to load investor data. Please refresh the page.",
-        variant: "destructive"
-      });
-    }
-  };
 
 
   const handleInvestorClick = async (investor: any) => {
@@ -273,18 +181,11 @@ const Dashboard = () => {
     paused: investors.filter(i => i.status === 'paused').length,
   };
 
-  if (!user || loading || importProgress) {
+  if (!user || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground text-lg mb-2">
-            {importProgress || "Loading..."}
-          </p>
-          {importProgress && (
-            <p className="text-sm text-muted-foreground">
-              This may take a moment...
-            </p>
-          )}
+          <p className="text-muted-foreground text-lg mb-2">Loading...</p>
         </div>
       </div>
     );
