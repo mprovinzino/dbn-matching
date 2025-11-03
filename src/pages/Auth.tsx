@@ -19,40 +19,53 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Validate email domain
-    const allowedDomains = ['@listwithclever.com', '@movewithclever.com'];
-    const emailDomain = email.substring(email.lastIndexOf('@'));
-    
-    if (!allowedDomains.some(domain => emailDomain.toLowerCase() === domain.toLowerCase())) {
+    try {
+      // Validate email domain server-side first
+      const { data: validationData, error: validationError } = await supabase.functions.invoke(
+        'validate-email-domain',
+        {
+          body: { email }
+        }
+      );
+
+      if (validationError || !validationData?.valid) {
+        setLoading(false);
+        toast({
+          variant: "destructive",
+          title: "Access Restricted",
+          description: validationData?.error || "Only @listwithclever.com and @movewithclever.com email addresses are allowed.",
+        });
+        return;
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      setLoading(false);
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message,
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Account created! You can now sign in.",
+        });
+      }
+    } catch (error) {
       setLoading(false);
       toast({
         variant: "destructive",
-        title: "Access Restricted",
-        description: "Only @listwithclever.com and @movewithclever.com email addresses are allowed.",
-      });
-      return;
-    }
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
-
-    setLoading(false);
-
-    if (error) {
-      toast({
-        variant: "destructive",
         title: "Error",
-        description: error.message,
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Account created! You can now sign in.",
+        description: "An error occurred during signup. Please try again.",
       });
     }
   };
