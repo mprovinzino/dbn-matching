@@ -404,6 +404,30 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
           </div>
         )}
 
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="cold_accepts"
+            checked={formData.cold_accepts}
+            onCheckedChange={(checked) => updateField('cold_accepts', checked)}
+          />
+          <Label htmlFor="cold_accepts" className="font-normal">Accepts Cold Leads</Label>
+        </div>
+
+        <div>
+          <Label>Offer Types</Label>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {['Cash', 'Financing', 'Subject To', 'Seller Finance', 'Lease Option', 'Wholesale', 'Assignment'].map((type) => (
+              <div key={type} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={formData.offer_types.includes(type)}
+                  onCheckedChange={() => toggleArrayField('offer_types', type)}
+                />
+                <Label className="font-normal text-sm">{type}</Label>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div>
           <Label>Business Tags</Label>
           <div className="grid grid-cols-2 gap-2 mt-2">
@@ -491,6 +515,51 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
             value={formData.price_max || ''}
             onChange={(e) => updateField('price_max', e.target.value ? parseInt(e.target.value) : undefined)}
           />
+        </div>
+      </div>
+
+      <div>
+        <Label>Property Condition</Label>
+        <div className="space-y-2 mt-2">
+          {['Turnkey', 'Light Rehab', 'Heavy Rehab', 'Gut Rehab', 'Teardown', 'New Construction'].map(condition => (
+            <div key={condition} className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.condition_types.includes(condition)}
+                onCheckedChange={() => toggleArrayField('condition_types', condition)}
+              />
+              <Label className="font-normal">{condition}</Label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <Label>Lead Types</Label>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {['Probate', 'Pre-Foreclosure', 'Divorce', 'Tax Delinquent', 'Absentee Owner', 'High Equity', 'Vacant', 'Inherited', 'Free and Clear', 'Distressed', 'Motivated Seller'].map(leadType => (
+            <div key={leadType} className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.lead_types.includes(leadType)}
+                onCheckedChange={() => toggleArrayField('lead_types', leadType)}
+              />
+              <Label className="font-normal text-sm">{leadType}</Label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <Label>Purchase Timeframe</Label>
+        <div className="space-y-2 mt-2">
+          {['Immediate (0-30 days)', '1-3 months', '3-6 months', '6-12 months', '12+ months', 'Flexible'].map(time => (
+            <div key={time} className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.timeframe.includes(time)}
+                onCheckedChange={() => toggleArrayField('timeframe', time)}
+              />
+              <Label className="font-normal">{time}</Label>
+            </div>
+          ))}
         </div>
       </div>
     </div>
