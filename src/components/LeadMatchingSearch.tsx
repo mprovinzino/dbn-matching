@@ -70,7 +70,7 @@ export function LeadMatchingSearch() {
           buy_box (*),
           markets (*)
         `)
-        .eq('status', 'active');
+        .in('status', ['active', 'test']);
 
       if (error) throw error;
 
