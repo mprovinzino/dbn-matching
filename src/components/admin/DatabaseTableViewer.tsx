@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -375,50 +375,63 @@ export const DatabaseTableViewer = () => {
           </div>
         ) : (
           <>
-            <ScrollArea className="h-[500px] w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {columns.map((col) => (
-                      <TableHead key={col} className="whitespace-nowrap">
-                        {col}
-                      </TableHead>
-                    ))}
-                    {!isReadOnly && <TableHead className="text-right">Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.map((row, idx) => (
-                    <TableRow key={row.id || idx}>
+            <ScrollArea className="h-[500px] w-full rounded-md border">
+              <div className="w-max min-w-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
                       {columns.map((col) => (
-                        <TableCell key={col} className="whitespace-nowrap">
-                          {formatValue(row[col])}
-                        </TableCell>
+                        <TableHead key={col} className="whitespace-nowrap">
+                          {col}
+                        </TableHead>
                       ))}
-                      {!isReadOnly && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleEdit(row)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleDelete(row)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
+                      {!isReadOnly && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.map((row, idx) => (
+                      <TableRow 
+                        key={row.id || idx}
+                        onClick={!isReadOnly ? () => handleEdit(row) : undefined}
+                        className={!isReadOnly ? "cursor-pointer hover:bg-muted/50" : ""}
+                      >
+                        {columns.map((col) => (
+                          <TableCell key={col} className="whitespace-nowrap">
+                            {formatValue(row[col])}
+                          </TableCell>
+                        ))}
+                        {!isReadOnly && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(row);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(row);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <ScrollBar orientation="horizontal" />
             </ScrollArea>
 
             <div className="flex items-center justify-between mt-4">
