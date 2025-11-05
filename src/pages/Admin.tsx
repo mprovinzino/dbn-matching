@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, Upload, Users, Database, Activity } from 'lucide-react';
 import { BatchSheetImport } from '@/components/admin/BatchSheetImport';
+import { DatabaseTableViewer } from '@/components/admin/DatabaseTableViewer';
 
 const Admin = () => {
   const { isAdmin, loading } = useAdminAccess();
@@ -100,17 +101,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="system" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Database Tools</CardTitle>
-                <CardDescription>
-                  System maintenance and configuration
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-sm">System tools coming soon...</p>
-              </CardContent>
-            </Card>
+            <DatabaseTableViewer />
           </TabsContent>
 
           <TabsContent value="logs" className="space-y-4">
