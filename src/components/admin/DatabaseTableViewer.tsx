@@ -196,7 +196,84 @@ export const DatabaseTableViewer = () => {
       );
     }
 
-    if (typeof value === 'boolean' || key.includes('_accepts') || key.includes('cold_accepts')) {
+    // Enum field: coverage_type
+    if (key === 'coverage_type') {
+      return (
+        <Select
+          value={editedRecord[key] || ''}
+          onValueChange={(val) => setEditedRecord({ ...editedRecord, [key]: val })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select coverage type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="national">National</SelectItem>
+            <SelectItem value="regional">Regional</SelectItem>
+            <SelectItem value="local">Local</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    // Enum field: market_type
+    if (key === 'market_type') {
+      return (
+        <Select
+          value={editedRecord[key] || ''}
+          onValueChange={(val) => setEditedRecord({ ...editedRecord, [key]: val })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select market type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="primary">Primary</SelectItem>
+            <SelectItem value="secondary">Secondary</SelectItem>
+            <SelectItem value="direct_purchase">Direct Purchase</SelectItem>
+            <SelectItem value="full_coverage">Full Coverage</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    // Enum field: status (investor_status)
+    if (key === 'status') {
+      return (
+        <Select
+          value={editedRecord[key] || ''}
+          onValueChange={(val) => setEditedRecord({ ...editedRecord, [key]: val })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="paused">Paused</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    // Enum field: role (app_role)
+    if (key === 'role') {
+      return (
+        <Select
+          value={editedRecord[key] || ''}
+          onValueChange={(val) => setEditedRecord({ ...editedRecord, [key]: val })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="moderator">Moderator</SelectItem>
+            <SelectItem value="user">User</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    if (typeof value === 'boolean' || key.includes('_accepts') || key.includes('cold_accepts') || key === 'seeded') {
       return (
         <div className="flex items-center space-x-2">
           <Checkbox
