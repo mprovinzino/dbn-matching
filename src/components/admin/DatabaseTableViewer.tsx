@@ -12,7 +12,8 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Pencil, Trash2, Database, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Database, RefreshCw, ChevronDown } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 
 const AVAILABLE_TABLES = [
@@ -287,6 +288,211 @@ export const DatabaseTableViewer = () => {
       );
     }
 
+    // Multi-select for lead_types
+    if (key === 'lead_types') {
+      const options = ['Probate', 'Pre-Foreclosure', 'Divorce', 'Tax Delinquent', 'Absentee Owner', 'High Equity', 'Vacant', 'Inherited', 'Free and Clear', 'Distressed', 'Motivated Seller'];
+      const currentValues = Array.isArray(editedRecord[key]) ? editedRecord[key] : [];
+      
+      return (
+        <Accordion type="single" collapsible className="w-full border rounded-md">
+          <AccordionItem value="item-1" className="border-none">
+            <AccordionTrigger className="px-3 py-2 hover:no-underline">
+              <span className="text-sm">{currentValues.length > 0 ? `${currentValues.length} selected` : 'Select lead types'}</span>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {options.map((option) => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={currentValues.includes(option)}
+                      onCheckedChange={(checked) => {
+                        const newValues = checked
+                          ? [...currentValues, option]
+                          : currentValues.filter((v: string) => v !== option);
+                        setEditedRecord({ ...editedRecord, [key]: newValues });
+                      }}
+                    />
+                    <Label className="font-normal cursor-pointer">{option}</Label>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      );
+    }
+
+    // Multi-select for timeframe
+    if (key === 'timeframe') {
+      const options = ['Immediate (0-30 days)', '1-3 months', '3-6 months', '6-12 months', '12+ months', 'Flexible'];
+      const currentValues = Array.isArray(editedRecord[key]) ? editedRecord[key] : [];
+      
+      return (
+        <Accordion type="single" collapsible className="w-full border rounded-md">
+          <AccordionItem value="item-1" className="border-none">
+            <AccordionTrigger className="px-3 py-2 hover:no-underline">
+              <span className="text-sm">{currentValues.length > 0 ? `${currentValues.length} selected` : 'Select timeframe'}</span>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3">
+              <div className="space-y-2">
+                {options.map((option) => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={currentValues.includes(option)}
+                      onCheckedChange={(checked) => {
+                        const newValues = checked
+                          ? [...currentValues, option]
+                          : currentValues.filter((v: string) => v !== option);
+                        setEditedRecord({ ...editedRecord, [key]: newValues });
+                      }}
+                    />
+                    <Label className="font-normal cursor-pointer">{option}</Label>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      );
+    }
+
+    // Multi-select for condition_types
+    if (key === 'condition_types') {
+      const options = ['Turnkey', 'Light Rehab', 'Heavy Rehab', 'Gut Rehab', 'Teardown', 'New Construction'];
+      const currentValues = Array.isArray(editedRecord[key]) ? editedRecord[key] : [];
+      
+      return (
+        <Accordion type="single" collapsible className="w-full border rounded-md">
+          <AccordionItem value="item-1" className="border-none">
+            <AccordionTrigger className="px-3 py-2 hover:no-underline">
+              <span className="text-sm">{currentValues.length > 0 ? `${currentValues.length} selected` : 'Select property conditions'}</span>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3">
+              <div className="space-y-2">
+                {options.map((option) => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={currentValues.includes(option)}
+                      onCheckedChange={(checked) => {
+                        const newValues = checked
+                          ? [...currentValues, option]
+                          : currentValues.filter((v: string) => v !== option);
+                        setEditedRecord({ ...editedRecord, [key]: newValues });
+                      }}
+                    />
+                    <Label className="font-normal cursor-pointer">{option}</Label>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      );
+    }
+
+    // Multi-select for property_types
+    if (key === 'property_types') {
+      const options = ['Single Family', 'Multi Family', 'Condo', 'Townhouse', 'Land', 'Commercial', 'Mobile Home'];
+      const currentValues = Array.isArray(editedRecord[key]) ? editedRecord[key] : [];
+      
+      return (
+        <Accordion type="single" collapsible className="w-full border rounded-md">
+          <AccordionItem value="item-1" className="border-none">
+            <AccordionTrigger className="px-3 py-2 hover:no-underline">
+              <span className="text-sm">{currentValues.length > 0 ? `${currentValues.length} selected` : 'Select property types'}</span>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3">
+              <div className="space-y-2">
+                {options.map((option) => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={currentValues.includes(option)}
+                      onCheckedChange={(checked) => {
+                        const newValues = checked
+                          ? [...currentValues, option]
+                          : currentValues.filter((v: string) => v !== option);
+                        setEditedRecord({ ...editedRecord, [key]: newValues });
+                      }}
+                    />
+                    <Label className="font-normal cursor-pointer">{option}</Label>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      );
+    }
+
+    // Multi-select for on_market_status
+    if (key === 'on_market_status') {
+      const options = ['On Market', 'Off Market', 'Pre-Market', 'For Sale By Owner'];
+      const currentValues = Array.isArray(editedRecord[key]) ? editedRecord[key] : [];
+      
+      return (
+        <Accordion type="single" collapsible className="w-full border rounded-md">
+          <AccordionItem value="item-1" className="border-none">
+            <AccordionTrigger className="px-3 py-2 hover:no-underline">
+              <span className="text-sm">{currentValues.length > 0 ? `${currentValues.length} selected` : 'Select market status'}</span>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3">
+              <div className="space-y-2">
+                {options.map((option) => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={currentValues.includes(option)}
+                      onCheckedChange={(checked) => {
+                        const newValues = checked
+                          ? [...currentValues, option]
+                          : currentValues.filter((v: string) => v !== option);
+                        setEditedRecord({ ...editedRecord, [key]: newValues });
+                      }}
+                    />
+                    <Label className="font-normal cursor-pointer">{option}</Label>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      );
+    }
+
+    // Multi-select for offer_types
+    if (key === 'offer_types') {
+      const options = ['Cash', 'Financing', 'Subject To', 'Seller Finance', 'Lease Option', 'Wholesale', 'Assignment'];
+      const currentValues = Array.isArray(editedRecord[key]) ? editedRecord[key] : [];
+      
+      return (
+        <Accordion type="single" collapsible className="w-full border rounded-md">
+          <AccordionItem value="item-1" className="border-none">
+            <AccordionTrigger className="px-3 py-2 hover:no-underline">
+              <span className="text-sm">{currentValues.length > 0 ? `${currentValues.length} selected` : 'Select offer types'}</span>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3">
+              <div className="space-y-2">
+                {options.map((option) => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={currentValues.includes(option)}
+                      onCheckedChange={(checked) => {
+                        const newValues = checked
+                          ? [...currentValues, option]
+                          : currentValues.filter((v: string) => v !== option);
+                        setEditedRecord({ ...editedRecord, [key]: newValues });
+                      }}
+                    />
+                    <Label className="font-normal cursor-pointer">{option}</Label>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      );
+    }
+
+    // Generic array handling for other arrays (states, zip_codes, tags, dmas)
     if (Array.isArray(value)) {
       return (
         <Textarea
