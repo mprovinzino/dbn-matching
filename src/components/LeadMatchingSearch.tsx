@@ -29,14 +29,20 @@ interface MatchedInvestor {
   coverage_type: string;
   tags: string[];
   tier: number;
+  status: string;
   weekly_cap: number;
   main_poc: string;
   matchScore: number;
+  locationScore: number;
+  buyBoxScore: number;
+  qualityScore: number;
+  capacityScore: number;
   matchReasons: string[];
   isPrimaryMarket: boolean;
   isSecondaryMarket: boolean;
   isFullCoverage: boolean;
   isDirectPurchase: boolean;
+  locationSpecificity: string;
 }
 
 export function LeadMatchingSearch() {
@@ -77,107 +83,167 @@ export function LeadMatchingSearch() {
       const matches: MatchedInvestor[] = [];
 
       investors?.forEach((investor) => {
-        let matchScore = 0;
         const matchReasons: string[] = [];
         
-        // Check for national coverage first
-        const hasNationalCoverage = investor.coverage_type === 'national';
-        
-        let isFullCoverage = hasNationalCoverage; // National investors automatically have full coverage
+        let isFullCoverage = false;
         let isDirectPurchase = false;
         let isPrimaryMarket = false;
         let isSecondaryMarket = false;
-
-        // Add national coverage bonus
-        if (hasNationalCoverage) {
-          matchScore += 50;
-          matchReasons.push("National coverage");
-        }
-
-        // Check market match
+        
+        // LOCATION FIT SCORE (0-35 points)
+        let locationScore = 0;
+        let locationSpecificity = 'none';
+        const hasNationalCoverage = investor.coverage_type === 'national';
+        
         const markets = investor.markets || [];
         
+        // Check all markets to find the BEST match type
         markets.forEach((market: any) => {
-      // Handle both proper arrays and space-separated string arrays
-      const stateMatch = market.states?.some((s: string) => 
-        s === leadData.state || s.includes(leadData.state)
-      );
-      const zipMatch = market.zip_codes?.some((z: string) => 
-        z === leadData.zipCode || z.includes(leadData.zipCode)
-      );
+          const stateMatch = market.states?.some((s: string) => 
+            s === leadData.state || s.includes(leadData.state)
+          );
+          const zipMatch = market.zip_codes?.some((z: string) => 
+            z === leadData.zipCode || z.includes(leadData.zipCode)
+          );
 
-          if (market.market_type === 'full_coverage' && stateMatch) {
-            isFullCoverage = true;
-            matchScore += 50;
-            matchReasons.push("Full coverage state match");
-          }
-
-          if (market.market_type === 'direct_purchase' && (stateMatch || zipMatch)) {
-            isDirectPurchase = true;
-            matchReasons.push(zipMatch ? "Direct purchase zip match" : "Direct purchase state match");
-          }
-
+          // Primary zip = highest priority
           if (market.market_type === 'primary' && zipMatch) {
-            isPrimaryMarket = true;
-            matchScore += 40;
-            matchReasons.push("Primary market zip code match");
+            if (locationScore < 35) {
+              locationScore = 35;
+              locationSpecificity = 'primary_zip';
+              isPrimaryMarket = true;
+              matchReasons.push("🎯 Primary market exact zip match");
+            }
           }
-
-          if (market.market_type === 'secondary' && zipMatch) {
-            isSecondaryMarket = true;
-            matchScore += 25;
-            matchReasons.push("Secondary market zip code match");
+          
+          // Direct purchase zip = very high priority
+          else if (market.market_type === 'direct_purchase' && zipMatch) {
+            if (locationScore < 30) {
+              locationScore = 30;
+              locationSpecificity = 'direct_zip';
+              isDirectPurchase = true;
+              matchReasons.push("💵 Direct purchase zip match");
+            }
+          }
+          
+          // Secondary zip = high priority
+          else if (market.market_type === 'secondary' && zipMatch) {
+            if (locationScore < 28) {
+              locationScore = 28;
+              locationSpecificity = 'secondary_zip';
+              isSecondaryMarket = true;
+              matchReasons.push("📍 Secondary market zip match");
+            }
+          }
+          
+          // Full coverage state = medium priority
+          else if (market.market_type === 'full_coverage' && stateMatch) {
+            if (locationScore < 22) {
+              locationScore = 22;
+              locationSpecificity = 'state_coverage';
+              isFullCoverage = true;
+              matchReasons.push("🗺️ Full state coverage");
+            }
+          }
+          
+          // Direct purchase state (no zip match)
+          else if (market.market_type === 'direct_purchase' && stateMatch && !zipMatch) {
+            if (locationScore < 20) {
+              locationScore = 20;
+              locationSpecificity = 'direct_state';
+              isDirectPurchase = true;
+              matchReasons.push("💵 Direct purchase state coverage");
+            }
           }
         });
 
-        // Skip if no market match (unless they have national coverage)
-        if (!hasNationalCoverage && !isFullCoverage && !isPrimaryMarket && !isSecondaryMarket) {
+        // National coverage = lowest priority (check after zip/state checks)
+        if (hasNationalCoverage && locationScore < 18) {
+          // Check if they also have state-level awareness
+          const hasStateInNational = markets.some((m: any) => 
+            m.states?.some((s: string) => s === leadData.state || s.includes(leadData.state))
+          );
+          
+          if (hasStateInNational) {
+            locationScore = 18;
+            locationSpecificity = 'national_state';
+            matchReasons.push("🌎 National coverage (state aware)");
+          } else {
+            locationScore = 15;
+            locationSpecificity = 'national_only';
+            matchReasons.push("🌎 National coverage");
+          }
+        }
+
+        // Skip if no market match at all
+        if (locationScore === 0) {
           return;
         }
 
-        // Check buy box criteria
+        // BUY BOX SCORE (0-30 points)
+        let buyBoxScore = 0;
+        let criteriaSet = 0;
+        
         const buyBox = investor.buy_box?.[0];
         if (buyBox) {
-          // Check if ask price falls within investor's buy box range
-          if (leadData.askPrice) {
-            const buyBoxPriceMin = buyBox.price_min ? Number(buyBox.price_min) : null;
-            const buyBoxPriceMax = buyBox.price_max ? Number(buyBox.price_max) : null;
+          // Count how many criteria the investor has set
+          if (buyBox.price_min && buyBox.price_max) criteriaSet++;
+          if (buyBox.property_types?.length > 0) criteriaSet++;
+          if (buyBox.condition_types?.length > 0) criteriaSet++;
+          if (buyBox.year_built_min || buyBox.year_built_max) criteriaSet++;
+
+          // Calculate matches
+          if (leadData.askPrice && buyBox.price_min && buyBox.price_max) {
+            const buyBoxPriceMin = Number(buyBox.price_min);
+            const buyBoxPriceMax = Number(buyBox.price_max);
             
-            if (buyBoxPriceMin && buyBoxPriceMax) {
-              const priceInRange = 
-                leadData.askPrice >= buyBoxPriceMin && 
-                leadData.askPrice <= buyBoxPriceMax;
-              
-              if (priceInRange) {
-                matchScore += 20;
-                matchReasons.push("Price match");
-              }
+            if (leadData.askPrice >= buyBoxPriceMin && leadData.askPrice <= buyBoxPriceMax) {
+              buyBoxScore += 8;
+              matchReasons.push("💰 Price in range");
             }
           }
 
-          // Property type match
           if (leadData.propertyType && buyBox.property_types?.includes(leadData.propertyType)) {
-            matchScore += 15;
-            matchReasons.push("Property type match");
+            buyBoxScore += 8;
+            matchReasons.push("🏠 Property type match");
           }
 
-          // Condition match
           if (leadData.condition && buyBox.condition_types?.includes(leadData.condition)) {
-            matchScore += 15;
-            matchReasons.push("Condition match");
+            buyBoxScore += 8;
+            matchReasons.push("🔧 Condition match");
           }
 
-          // Year built match
-          if (leadData.yearBuilt) {
+          if (leadData.yearBuilt && (buyBox.year_built_min || buyBox.year_built_max)) {
             const yearMin = buyBox.year_built_min || 0;
             const yearMax = buyBox.year_built_max || 9999;
-            
             if (leadData.yearBuilt >= yearMin && leadData.yearBuilt <= yearMax) {
-              matchScore += 10;
-              matchReasons.push("Year built match");
+              buyBoxScore += 6;
+              matchReasons.push("📅 Year built match");
             }
           }
+
+          // Apply completeness multiplier
+          if (criteriaSet <= 1) {
+            buyBoxScore *= 0.5;
+          } else if (criteriaSet <= 3) {
+            buyBoxScore *= 0.8;
+          }
         }
+
+        // QUALITY SCORE (0-25 points)
+        const tierScore = Math.max(0, 20 - (investor.tier - 1) * 2); // Tier 1 = 20pts, Tier 10 = 2pts
+        const statusScore = investor.status === 'active' ? 5 : investor.status === 'test' ? 2 : 0;
+        const qualityScore = tierScore + statusScore;
+
+        // CAPACITY SCORE (0-10 points)
+        let capacityScore = 0;
+        if (investor.weekly_cap <= 25) capacityScore = 3;
+        else if (investor.weekly_cap <= 50) capacityScore = 5;
+        else if (investor.weekly_cap <= 100) capacityScore = 8;
+        else capacityScore = 10;
+
+        // COMPOSITE SCORE (0-100)
+        const matchScore = Math.round(locationScore + buyBoxScore + qualityScore + capacityScore);
 
         matches.push({
           id: investor.id,
@@ -186,19 +252,30 @@ export function LeadMatchingSearch() {
           coverage_type: investor.coverage_type,
           tags: investor.tags || [],
           tier: investor.tier,
+          status: investor.status,
           weekly_cap: investor.weekly_cap,
           main_poc: investor.main_poc,
           matchScore,
+          locationScore,
+          buyBoxScore,
+          qualityScore,
+          capacityScore,
           matchReasons,
-          isPrimaryMarket: isPrimaryMarket || isFullCoverage,
+          isPrimaryMarket,
           isSecondaryMarket,
           isFullCoverage,
           isDirectPurchase,
+          locationSpecificity,
         });
       });
 
-      // Sort by match score
-      matches.sort((a, b) => b.matchScore - a.matchScore);
+      // Sort by composite score, then by tier (for ties)
+      matches.sort((a, b) => {
+        if (b.matchScore !== a.matchScore) {
+          return b.matchScore - a.matchScore;
+        }
+        return a.tier - b.tier; // Lower tier is better
+      });
       setMatchedInvestors(matches);
     } catch (error) {
       console.error('Error searching for matches:', error);
