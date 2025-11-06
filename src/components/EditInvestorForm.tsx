@@ -521,7 +521,7 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
       <div>
         <Label>Property Condition</Label>
         <div className="space-y-2 mt-2">
-          {['Turnkey', 'Light Rehab', 'Heavy Rehab', 'Gut Rehab', 'Teardown', 'New Construction'].map(condition => (
+          {['Move in Ready with newer finishes', 'Move in Ready with Older Finishes', 'Needs Few Repairs', 'Needs Major Repairs'].map(condition => (
             <div key={condition} className="flex items-center space-x-2">
               <Checkbox
                 checked={formData.condition_types.includes(condition)}

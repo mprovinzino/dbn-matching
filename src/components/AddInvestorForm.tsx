@@ -387,6 +387,21 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
           />
         </div>
       </div>
+
+      <div>
+        <Label>Property Condition</Label>
+        <div className="space-y-2 mt-2">
+          {['Move in Ready with newer finishes', 'Move in Ready with Older Finishes', 'Needs Few Repairs', 'Needs Major Repairs'].map(condition => (
+            <div key={condition} className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.condition_types.includes(condition)}
+                onCheckedChange={() => toggleArrayField('condition_types', condition)}
+              />
+              <Label className="font-normal">{condition}</Label>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 

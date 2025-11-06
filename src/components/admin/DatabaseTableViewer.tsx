@@ -358,7 +358,7 @@ export const DatabaseTableViewer = () => {
 
     // Multi-select for condition_types
     if (key === 'condition_types') {
-      const options = ['Turnkey', 'Light Rehab', 'Heavy Rehab', 'Gut Rehab', 'Teardown', 'New Construction'];
+      const options = ['Move in Ready with newer finishes', 'Move in Ready with Older Finishes', 'Needs Few Repairs', 'Needs Major Repairs'];
       const currentValues = Array.isArray(editedRecord[key]) ? editedRecord[key] : [];
       
       return (
