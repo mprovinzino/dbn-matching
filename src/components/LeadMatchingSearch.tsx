@@ -432,11 +432,10 @@ export function LeadMatchingSearch() {
                   <SelectValue placeholder="Select condition" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Excellent">Excellent</SelectItem>
-                  <SelectItem value="Good">Good</SelectItem>
-                  <SelectItem value="Fair">Fair</SelectItem>
-                  <SelectItem value="Poor">Poor</SelectItem>
-                  <SelectItem value="Distressed">Distressed</SelectItem>
+                  <SelectItem value="Move in Ready with Modern Finishes">Move in Ready with Modern Finishes</SelectItem>
+                  <SelectItem value="Move in Ready with Older Finishes">Move in Ready with Older Finishes</SelectItem>
+                  <SelectItem value="Needs Few Repairs">Needs Few Repairs</SelectItem>
+                  <SelectItem value="Needs Major Repairs">Needs Major Repairs</SelectItem>
                 </SelectContent>
               </Select>
             </div>
