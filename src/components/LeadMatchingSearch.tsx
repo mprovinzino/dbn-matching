@@ -330,7 +330,7 @@ export function LeadMatchingSearch() {
     }
   };
 
-  const primaryMarketInvestors = matchedInvestors.filter(inv => inv.isPrimaryMarket);
+  
 
   return (
     <div className="space-y-6">
@@ -523,37 +523,30 @@ export function LeadMatchingSearch() {
           </div>
 
           {viewMode === "tiles" ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Primary Market Investors */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <MapPin className="h-5 w-5 text-blue-500" />
-                    Primary Market Investors ({primaryMarketInvestors.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {primaryMarketInvestors.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No primary market investors match this lead
+            <div className="space-y-4">
+              {matchedInvestors.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8">
+                    <p className="text-center text-muted-foreground">
+                      No investors match this lead
                     </p>
-                  ) : (
-                    primaryMarketInvestors.map((investor) => (
-                      <ExpandableInvestorCard 
-                        key={investor.id} 
-                        investor={investor}
-                        isExpanded={expandedCards.has(investor.id)}
-                        isSelected={selectedInvestors.includes(investor.id)}
-                        onToggleExpand={() => handleToggleExpand(investor.id)}
-                        onSelect={() => handleSelectInvestor(investor.id)}
-                        onDeselect={() => handleDeselectInvestor(investor.id)}
-                        onViewDetails={() => handleInvestorClick(investor.id)}
-                        canSelect={selectedInvestors.length < 3 || selectedInvestors.includes(investor.id)}
-                      />
-                    ))
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              ) : (
+                matchedInvestors.map((investor) => (
+                  <ExpandableInvestorCard 
+                    key={investor.id} 
+                    investor={investor}
+                    isExpanded={expandedCards.has(investor.id)}
+                    isSelected={selectedInvestors.includes(investor.id)}
+                    onToggleExpand={() => handleToggleExpand(investor.id)}
+                    onSelect={() => handleSelectInvestor(investor.id)}
+                    onDeselect={() => handleDeselectInvestor(investor.id)}
+                    onViewDetails={() => handleInvestorClick(investor.id)}
+                    canSelect={selectedInvestors.length < 3 || selectedInvestors.includes(investor.id)}
+                  />
+                ))
+              )}
             </div>
           ) : (
             <Card>
@@ -563,7 +556,6 @@ export function LeadMatchingSearch() {
                     <TableRow>
                       <TableHead>Company</TableHead>
                       <TableHead>POC</TableHead>
-                      <TableHead>Market Type</TableHead>
                       <TableHead>Tier</TableHead>
                       <TableHead>Weekly Cap</TableHead>
                       <TableHead>Match Score</TableHead>
@@ -573,7 +565,7 @@ export function LeadMatchingSearch() {
                   <TableBody>
                     {matchedInvestors.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                           No investors match this lead
                         </TableCell>
                       </TableRow>
@@ -595,11 +587,6 @@ export function LeadMatchingSearch() {
                             </div>
                           </TableCell>
                           <TableCell>{investor.main_poc}</TableCell>
-                          <TableCell>
-                            <Badge variant={investor.isPrimaryMarket ? "default" : "secondary"}>
-                              {investor.isPrimaryMarket ? "Primary" : "Secondary"}
-                            </Badge>
-                          </TableCell>
                           <TableCell>Tier {investor.tier}</TableCell>
                           <TableCell>{investor.weekly_cap}/week</TableCell>
                           <TableCell>
