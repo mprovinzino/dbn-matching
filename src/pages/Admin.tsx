@@ -4,8 +4,7 @@ import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Upload, Users, Database, Activity } from 'lucide-react';
-import { BatchSheetImport } from '@/components/admin/BatchSheetImport';
+import { Shield, Users, Database, Activity } from 'lucide-react';
 import { DatabaseTableViewer } from '@/components/admin/DatabaseTableViewer';
 
 const Admin = () => {
@@ -62,12 +61,8 @@ const Admin = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="import" className="space-y-6">
+        <Tabs defaultValue="users" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="import" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Data Import
-            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               User Management
@@ -81,10 +76,6 @@ const Admin = () => {
               Activity Logs
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="import" className="space-y-4">
-            <BatchSheetImport />
-          </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
             <Card>

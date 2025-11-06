@@ -356,13 +356,17 @@ const Dashboard = () => {
             <MapPin className="h-4 w-4 mr-2" />
             Coverage Map
           </Button>
-          <Button onClick={() => setQuickAddOpen(true)} variant="secondary">
-            Quick Add from Sheet
-          </Button>
-          <Button onClick={() => setAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Investor
-          </Button>
+          {isAdmin && (
+            <>
+              <Button onClick={() => setQuickAddOpen(true)} variant="secondary">
+                Quick Add from Sheet
+              </Button>
+              <Button onClick={() => setAddModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Investor
+              </Button>
+            </>
+          )}
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
             Filters
@@ -470,6 +474,7 @@ const Dashboard = () => {
         investor={selectedInvestor}
         buyBox={selectedBuyBox}
         markets={selectedMarkets}
+        isAdmin={isAdmin}
         onEdit={() => {
           setDetailModalOpen(false);
           setEditModalOpen(true);
