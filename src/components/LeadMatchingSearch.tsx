@@ -648,13 +648,18 @@ export function LeadMatchingSearch() {
                           <TableCell>Tier {investor.tier}</TableCell>
                           <TableCell>{investor.weekly_cap}/week</TableCell>
                           <TableCell>
-                            <Badge 
-                              style={{
-                                backgroundColor: `hsl(${Math.min(investor.matchScore, 100) * 1.2}, 70%, 50%)`,
-                              }}
-                            >
-                              {investor.matchScore}%
-                            </Badge>
+                            <div className="space-y-1">
+                              <Badge 
+                                style={{
+                                  backgroundColor: `hsl(${Math.min(investor.matchScore, 100) * 1.2}, 70%, 50%)`,
+                                }}
+                              >
+                                {investor.matchScore}/100
+                              </Badge>
+                              <div className="text-xs text-muted-foreground">
+                                L:{investor.locationScore} B:{Math.round(investor.buyBoxScore)} Q:{investor.qualityScore} C:{investor.capacityScore}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             {investor.hubspot_url && (
@@ -807,6 +812,29 @@ function ExpandableInvestorCard({
               >
                 {investor.matchScore}% Match
               </Badge>
+            </div>
+
+            {/* Score Breakdown */}
+            <div className="space-y-2 bg-muted/30 p-3 rounded-md">
+              <div className="text-xs font-semibold mb-2">Score Breakdown ({investor.matchScore}/100)</div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">📍 Location Fit:</span>
+                  <Badge variant="outline" className="text-xs">{investor.locationScore}/35</Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">🏠 Buy Box Match:</span>
+                  <Badge variant="outline" className="text-xs">{Math.round(investor.buyBoxScore)}/30</Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">⭐ Investor Quality:</span>
+                  <Badge variant="outline" className="text-xs">{investor.qualityScore}/25</Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">📊 Capacity:</span>
+                  <Badge variant="outline" className="text-xs">{investor.capacityScore}/10</Badge>
+                </div>
+              </div>
             </div>
 
             {investor.tags.length > 0 && (
