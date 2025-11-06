@@ -236,6 +236,23 @@ export function LeadMatchingSearch() {
           }
         }
 
+        // Add reasons for criteria that DIDN'T match
+        if (enteredCriteria.includes('location') && !criteriaMatches.location) {
+          matchReasons.push("✗ Location not covered");
+        }
+        if (enteredCriteria.includes('price') && !criteriaMatches.price) {
+          matchReasons.push("✗ Price outside range");
+        }
+        if (enteredCriteria.includes('yearBuilt') && !criteriaMatches.yearBuilt) {
+          matchReasons.push("✗ Year built outside range");
+        }
+        if (enteredCriteria.includes('propertyType') && !criteriaMatches.propertyType) {
+          matchReasons.push("✗ Property type not accepted");
+        }
+        if (enteredCriteria.includes('condition') && !criteriaMatches.condition) {
+          matchReasons.push("✗ Condition not accepted");
+        }
+
         // Only include investors with at least 1 matching criteria
         if (matchCount === 0) {
           return;
