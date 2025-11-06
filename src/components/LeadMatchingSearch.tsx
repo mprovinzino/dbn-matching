@@ -32,11 +32,16 @@ interface MatchedInvestor {
   status: string;
   weekly_cap: number;
   main_poc: string;
-  matchScore: number;
-  locationScore: number;
-  buyBoxScore: number;
-  qualityScore: number;
-  capacityScore: number;
+  matchScore: number; // Now represents percentage 0-100
+  matchCount: number; // How many criteria matched
+  totalCriteria: number; // How many criteria were searched
+  criteriaMatches: {
+    location?: boolean;
+    price?: boolean;
+    yearBuilt?: boolean;
+    propertyType?: boolean;
+    condition?: boolean;
+  };
   matchReasons: string[];
   isPrimaryMarket: boolean;
   isFullCoverage: boolean;
@@ -67,6 +72,16 @@ export function LeadMatchingSearch() {
     setHasSearched(true);
 
     try {
+      // Count how many criteria the user entered
+      const enteredCriteria: string[] = [];
+      if (leadData.state && leadData.zipCode) enteredCriteria.push('location');
+      if (leadData.askPrice) enteredCriteria.push('price');
+      if (leadData.yearBuilt) enteredCriteria.push('yearBuilt');
+      if (leadData.propertyType) enteredCriteria.push('propertyType');
+      if (leadData.condition) enteredCriteria.push('condition');
+
+      const totalCriteria = enteredCriteria.length;
+
       // Get all active investors with their buy_box and markets data
       const { data: investors, error } = await supabase
         .from('investors')
@@ -83,155 +98,143 @@ export function LeadMatchingSearch() {
 
       investors?.forEach((investor) => {
         const matchReasons: string[] = [];
+        let matchCount = 0;
+        const criteriaMatches: Record<string, boolean> = {};
         
         let isFullCoverage = false;
         let isDirectPurchase = false;
         let isPrimaryMarket = false;
-        
-        // LOCATION FIT SCORE (0-35 points)
-        let locationScore = 0;
         let locationSpecificity = 'none';
-        const hasNationalCoverage = investor.coverage_type === 'national';
         
         const markets = investor.markets || [];
+        const buyBox = investor.buy_box?.[0];
         
-        // Check all markets to find the BEST match type
-        markets.forEach((market: any) => {
-          const stateMatch = market.states?.some((s: string) => 
-            s === leadData.state || s.includes(leadData.state)
-          );
-          const zipMatch = market.zip_codes?.some((z: string) => 
-            z === leadData.zipCode || z.includes(leadData.zipCode)
-          );
+        // LOCATION MATCH (if entered)
+        if (enteredCriteria.includes('location')) {
+          let hasLocationMatch = false;
+          const hasNationalCoverage = investor.coverage_type === 'national';
+          
+          // Check all markets to find the BEST match type
+          markets.forEach((market: any) => {
+            const stateMatch = market.states?.some((s: string) => 
+              s === leadData.state || s.includes(leadData.state)
+            );
+            const zipMatch = market.zip_codes?.some((z: string) => 
+              z === leadData.zipCode || z.includes(leadData.zipCode)
+            );
 
-          // Primary zip = highest priority
-          if (market.market_type === 'primary' && zipMatch) {
-            if (locationScore < 35) {
-              locationScore = 35;
+            // Primary zip = highest priority
+            if (market.market_type === 'primary' && zipMatch) {
+              hasLocationMatch = true;
               locationSpecificity = 'primary_zip';
               isPrimaryMarket = true;
               matchReasons.push("🎯 Primary market exact zip match");
             }
-          }
-          
-          // Direct purchase zip = very high priority
-          else if (market.market_type === 'direct_purchase' && zipMatch) {
-            if (locationScore < 30) {
-              locationScore = 30;
-              locationSpecificity = 'direct_zip';
-              isDirectPurchase = true;
-              matchReasons.push("💵 Direct purchase zip match");
+            // Direct purchase zip = very high priority
+            else if (market.market_type === 'direct_purchase' && zipMatch) {
+              if (locationSpecificity !== 'primary_zip') {
+                hasLocationMatch = true;
+                locationSpecificity = 'direct_zip';
+                isDirectPurchase = true;
+                matchReasons.push("💵 Direct purchase zip match");
+              }
             }
-          }
-          
-          // Full coverage state = medium priority
-          else if (market.market_type === 'full_coverage' && stateMatch) {
-            if (locationScore < 22) {
-              locationScore = 22;
-              locationSpecificity = 'state_coverage';
-              isFullCoverage = true;
-              matchReasons.push("🗺️ Full state coverage");
+            // Full coverage state = medium priority
+            else if (market.market_type === 'full_coverage' && stateMatch) {
+              if (!['primary_zip', 'direct_zip'].includes(locationSpecificity)) {
+                hasLocationMatch = true;
+                locationSpecificity = 'state_coverage';
+                isFullCoverage = true;
+                matchReasons.push("🗺️ Full state coverage");
+              }
             }
-          }
-          
-          // Direct purchase state (no zip match)
-          else if (market.market_type === 'direct_purchase' && stateMatch && !zipMatch) {
-            if (locationScore < 20) {
-              locationScore = 20;
-              locationSpecificity = 'direct_state';
-              isDirectPurchase = true;
-              matchReasons.push("💵 Direct purchase state coverage");
+            // Direct purchase state (no zip match)
+            else if (market.market_type === 'direct_purchase' && stateMatch && !zipMatch) {
+              if (!['primary_zip', 'direct_zip', 'state_coverage'].includes(locationSpecificity)) {
+                hasLocationMatch = true;
+                locationSpecificity = 'direct_state';
+                isDirectPurchase = true;
+                matchReasons.push("💵 Direct purchase state coverage");
+              }
             }
-          }
-        });
+          });
 
-        // National coverage = lowest priority (check after zip/state checks)
-        if (hasNationalCoverage && locationScore < 18) {
-          // Check if they also have state-level awareness
-          const hasStateInNational = markets.some((m: any) => 
-            m.states?.some((s: string) => s === leadData.state || s.includes(leadData.state))
-          );
-          
-          if (hasStateInNational) {
-            locationScore = 18;
-            locationSpecificity = 'national_state';
-            matchReasons.push("🌎 National coverage (state aware)");
-          } else {
-            locationScore = 15;
-            locationSpecificity = 'national_only';
-            matchReasons.push("🌎 National coverage");
+          // National coverage = lowest priority (check after zip/state checks)
+          if (!hasLocationMatch && hasNationalCoverage) {
+            // Check if they also have state-level awareness
+            const hasStateInNational = markets.some((m: any) => 
+              m.states?.some((s: string) => s === leadData.state || s.includes(leadData.state))
+            );
+            
+            if (hasStateInNational) {
+              hasLocationMatch = true;
+              locationSpecificity = 'national_state';
+              matchReasons.push("🌎 National coverage (state aware)");
+            } else {
+              hasLocationMatch = true;
+              locationSpecificity = 'national_only';
+              matchReasons.push("🌎 National coverage");
+            }
+          }
+
+          if (hasLocationMatch) {
+            matchCount++;
+            criteriaMatches.location = true;
           }
         }
 
-        // Skip if no market match at all
-        if (locationScore === 0) {
+        // Skip if location was searched but no match found
+        if (enteredCriteria.includes('location') && !criteriaMatches.location) {
           return;
         }
 
-        // BUY BOX SCORE (0-30 points)
-        let buyBoxScore = 0;
-        let criteriaSet = 0;
-        
-        const buyBox = investor.buy_box?.[0];
-        if (buyBox) {
-          // Count how many criteria the investor has set
-          if (buyBox.price_min && buyBox.price_max) criteriaSet++;
-          if (buyBox.property_types?.length > 0) criteriaSet++;
-          if (buyBox.condition_types?.length > 0) criteriaSet++;
-          if (buyBox.year_built_min || buyBox.year_built_max) criteriaSet++;
-
-          // Calculate matches
-          if (leadData.askPrice && buyBox.price_min && buyBox.price_max) {
-            const buyBoxPriceMin = Number(buyBox.price_min);
-            const buyBoxPriceMax = Number(buyBox.price_max);
-            
-            if (leadData.askPrice >= buyBoxPriceMin && leadData.askPrice <= buyBoxPriceMax) {
-              buyBoxScore += 8;
-              matchReasons.push("💰 Price in range");
-            }
-          }
-
-          if (leadData.propertyType && buyBox.property_types?.includes(leadData.propertyType)) {
-            buyBoxScore += 8;
-            matchReasons.push("🏠 Property type match");
-          }
-
-          if (leadData.condition && buyBox.condition_types?.includes(leadData.condition)) {
-            buyBoxScore += 8;
-            matchReasons.push("🔧 Condition match");
-          }
-
-          if (leadData.yearBuilt && (buyBox.year_built_min || buyBox.year_built_max)) {
-            const yearMin = buyBox.year_built_min || 0;
-            const yearMax = buyBox.year_built_max || 9999;
-            if (leadData.yearBuilt >= yearMin && leadData.yearBuilt <= yearMax) {
-              buyBoxScore += 6;
-              matchReasons.push("📅 Year built match");
-            }
-          }
-
-          // Apply completeness multiplier
-          if (criteriaSet <= 1) {
-            buyBoxScore *= 0.5;
-          } else if (criteriaSet <= 3) {
-            buyBoxScore *= 0.8;
+        // PRICE MATCH (if entered)
+        if (enteredCriteria.includes('price') && buyBox) {
+          const priceMin = Number(buyBox.price_min) || 0;
+          const priceMax = Number(buyBox.price_max) || Infinity;
+          if (leadData.askPrice! >= priceMin && leadData.askPrice! <= priceMax) {
+            matchCount++;
+            criteriaMatches.price = true;
+            matchReasons.push("💰 Price in range");
           }
         }
 
-        // QUALITY SCORE (0-25 points)
-        const tierScore = Math.max(0, 20 - (investor.tier - 1) * 2); // Tier 1 = 20pts, Tier 10 = 2pts
-        const statusScore = investor.status === 'active' ? 5 : investor.status === 'test' ? 2 : 0;
-        const qualityScore = tierScore + statusScore;
+        // YEAR BUILT MATCH (if entered)
+        if (enteredCriteria.includes('yearBuilt') && buyBox) {
+          const yearMin = buyBox.year_built_min || 0;
+          const yearMax = buyBox.year_built_max || 9999;
+          if (leadData.yearBuilt! >= yearMin && leadData.yearBuilt! <= yearMax) {
+            matchCount++;
+            criteriaMatches.yearBuilt = true;
+            matchReasons.push("📅 Year built match");
+          }
+        }
 
-        // CAPACITY SCORE (0-10 points)
-        let capacityScore = 0;
-        if (investor.weekly_cap <= 25) capacityScore = 3;
-        else if (investor.weekly_cap <= 50) capacityScore = 5;
-        else if (investor.weekly_cap <= 100) capacityScore = 8;
-        else capacityScore = 10;
+        // PROPERTY TYPE MATCH (if entered)
+        if (enteredCriteria.includes('propertyType') && buyBox) {
+          if (buyBox.property_types?.includes(leadData.propertyType!)) {
+            matchCount++;
+            criteriaMatches.propertyType = true;
+            matchReasons.push("🏠 Property type match");
+          }
+        }
 
-        // COMPOSITE SCORE (0-100)
-        const matchScore = Math.round(locationScore + buyBoxScore + qualityScore + capacityScore);
+        // CONDITION MATCH (if entered)
+        if (enteredCriteria.includes('condition') && buyBox) {
+          if (buyBox.condition_types?.includes(leadData.condition!)) {
+            matchCount++;
+            criteriaMatches.condition = true;
+            matchReasons.push("🔧 Condition match");
+          }
+        }
+
+        // Only include investors with at least 1 matching criteria
+        if (matchCount === 0) {
+          return;
+        }
+
+        // Calculate percentage
+        const matchScore = Math.round((matchCount / totalCriteria) * 100);
 
         matches.push({
           id: investor.id,
@@ -244,10 +247,9 @@ export function LeadMatchingSearch() {
           weekly_cap: investor.weekly_cap,
           main_poc: investor.main_poc,
           matchScore,
-          locationScore,
-          buyBoxScore,
-          qualityScore,
-          capacityScore,
+          matchCount,
+          totalCriteria,
+          criteriaMatches,
           matchReasons,
           isPrimaryMarket,
           isFullCoverage,
@@ -256,7 +258,7 @@ export function LeadMatchingSearch() {
         });
       });
 
-      // Sort by composite score, then by tier (for ties)
+      // Sort by percentage score, then by tier (for ties)
       matches.sort((a, b) => {
         if (b.matchScore !== a.matchScore) {
           return b.matchScore - a.matchScore;
@@ -590,17 +592,17 @@ export function LeadMatchingSearch() {
                           <TableCell>Tier {investor.tier}</TableCell>
                           <TableCell>{investor.weekly_cap}/week</TableCell>
                           <TableCell>
-                            <div className="space-y-1">
+                            <div className="flex flex-col gap-1">
                               <Badge 
                                 style={{
                                   backgroundColor: `hsl(${Math.min(investor.matchScore, 100) * 1.2}, 70%, 50%)`,
                                 }}
                               >
-                                {investor.matchScore}/100
+                                {investor.matchScore}%
                               </Badge>
-                              <div className="text-xs text-muted-foreground">
-                                L:{investor.locationScore} B:{Math.round(investor.buyBoxScore)} Q:{investor.qualityScore} C:{investor.capacityScore}
-                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {investor.matchCount}/{investor.totalCriteria} criteria
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -756,26 +758,47 @@ function ExpandableInvestorCard({
               </Badge>
             </div>
 
-            {/* Score Breakdown */}
+            {/* Criteria Match Breakdown */}
             <div className="space-y-2 bg-muted/30 p-3 rounded-md">
-              <div className="text-xs font-semibold mb-2">Score Breakdown ({investor.matchScore}/100)</div>
+              <div className="text-xs font-semibold mb-2">
+                Matching {investor.matchCount} of {investor.totalCriteria} criteria ({investor.matchScore}%)
+              </div>
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">📍 Location Fit:</span>
-                  <Badge variant="outline" className="text-xs">{investor.locationScore}/35</Badge>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">🏠 Buy Box Match:</span>
-                  <Badge variant="outline" className="text-xs">{Math.round(investor.buyBoxScore)}/30</Badge>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">⭐ Investor Quality:</span>
-                  <Badge variant="outline" className="text-xs">{investor.qualityScore}/25</Badge>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">📊 Capacity:</span>
-                  <Badge variant="outline" className="text-xs">{investor.capacityScore}/10</Badge>
-                </div>
+                {investor.criteriaMatches.location !== undefined && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={investor.criteriaMatches.location ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                      {investor.criteriaMatches.location ? "✓" : "✗"} Location
+                    </span>
+                  </div>
+                )}
+                {investor.criteriaMatches.price !== undefined && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={investor.criteriaMatches.price ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                      {investor.criteriaMatches.price ? "✓" : "✗"} Price Range
+                    </span>
+                  </div>
+                )}
+                {investor.criteriaMatches.yearBuilt !== undefined && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={investor.criteriaMatches.yearBuilt ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                      {investor.criteriaMatches.yearBuilt ? "✓" : "✗"} Year Built
+                    </span>
+                  </div>
+                )}
+                {investor.criteriaMatches.propertyType !== undefined && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={investor.criteriaMatches.propertyType ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                      {investor.criteriaMatches.propertyType ? "✓" : "✗"} Property Type
+                    </span>
+                  </div>
+                )}
+                {investor.criteriaMatches.condition !== undefined && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={investor.criteriaMatches.condition ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                      {investor.criteriaMatches.condition ? "✓" : "✗"} Condition
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
