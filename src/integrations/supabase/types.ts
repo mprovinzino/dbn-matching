@@ -292,6 +292,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_all_users_with_roles: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          last_sign_in_at: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          user_id: string
+        }[]
+      }
       get_dma_coverage: {
         Args: { market_zip_codes: string[] }
         Returns: {

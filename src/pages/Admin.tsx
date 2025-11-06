@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, Users, Database, Activity } from 'lucide-react';
 import { DatabaseTableViewer } from '@/components/admin/DatabaseTableViewer';
+import { UserManagement } from '@/components/admin/UserManagement';
 
 const Admin = () => {
   const { isAdmin, loading } = useAdminAccess();
@@ -78,17 +79,7 @@ const Admin = () => {
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Roles</CardTitle>
-                <CardDescription>
-                  Manage user access and permissions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-sm">User management coming soon...</p>
-              </CardContent>
-            </Card>
+            <UserManagement />
           </TabsContent>
 
           <TabsContent value="system" className="space-y-4">
