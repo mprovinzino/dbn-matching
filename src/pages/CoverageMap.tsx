@@ -16,6 +16,17 @@ export default function CoverageMap() {
   const [user, setUser] = useState<User | null>(null);
   const investorParam = searchParams.get("investor");
 
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [marketType, setMarketType] = useState("all");
+  const [minInvestors, setMinInvestors] = useState(0);
+  const [selectedState, setSelectedState] = useState<string | null>(null);
+  const [selectedStateData, setSelectedStateData] = useState<{ investorIds: string[], coverage: any[], stateLevelData: any[] } | null>(null);
+  const [totalInvestors, setTotalInvestors] = useState(0);
+  const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(investorParam);
+  const [selectedInvestorName, setSelectedInvestorName] = useState<string | null>(null);
+
   // Check authentication
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -37,22 +48,6 @@ export default function CoverageMap() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const [searchInput, setSearchInput] = useState("");
-  // Query used to actually filter the map (set only on selection)
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [marketType, setMarketType] = useState("all");
-  const [minInvestors, setMinInvestors] = useState(0);
-  const [selectedState, setSelectedState] = useState<string | null>(null);
-  const [selectedStateData, setSelectedStateData] = useState<{ investorIds: string[], coverage: any[], stateLevelData: any[] } | null>(null);
-  const [totalInvestors, setTotalInvestors] = useState(0);
-  const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(investorParam);
-  const [selectedInvestorName, setSelectedInvestorName] = useState<string | null>(null);
-
-  if (!user) {
-    return null;
-  }
-
   // Debounce the actual filter query (not the input typing)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -61,6 +56,17 @@ export default function CoverageMap() {
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Load total investor count
+  useEffect(() => {
+    const loadInvestorCount = async () => {
+      const { count } = await supabase
+        .from("investors")
+        .select("*", { count: "exact", head: true });
+      setTotalInvestors(count || 0);
+    };
+    loadInvestorCount();
+  }, []);
 
   const { data: coverage, isLoading, isFetching, error } = useMapCoverage({
     marketType,
@@ -104,16 +110,9 @@ export default function CoverageMap() {
     }
   };
 
-  // Load total investor count
-  useEffect(() => {
-    const loadInvestorCount = async () => {
-      const { count } = await supabase
-        .from("investors")
-        .select("*", { count: "exact", head: true });
-      setTotalInvestors(count || 0);
-    };
-    loadInvestorCount();
-  }, []);
+  if (!user) {
+    return null;
+  }
 
   if ((isLoading && !coverage) || (isLoadingStates && !stateLevelCoverage)) {
     return (
