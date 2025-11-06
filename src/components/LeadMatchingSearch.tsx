@@ -210,18 +210,26 @@ export function LeadMatchingSearch() {
           }
         }
 
-        // PROPERTY TYPE MATCH (if entered)
+        // PROPERTY TYPE MATCH (if entered) - partial match
         if (enteredCriteria.includes('propertyType') && buyBox) {
-          if (buyBox.property_types?.includes(leadData.propertyType!)) {
+          const hasPropertyTypeMatch = buyBox.property_types?.some(type => 
+            type.toLowerCase().includes(leadData.propertyType!.toLowerCase()) ||
+            leadData.propertyType!.toLowerCase().includes(type.toLowerCase())
+          );
+          if (hasPropertyTypeMatch) {
             matchCount++;
             criteriaMatches.propertyType = true;
             matchReasons.push("🏠 Property type match");
           }
         }
 
-        // CONDITION MATCH (if entered)
+        // CONDITION MATCH (if entered) - partial match
         if (enteredCriteria.includes('condition') && buyBox) {
-          if (buyBox.condition_types?.includes(leadData.condition!)) {
+          const hasConditionMatch = buyBox.condition_types?.some(type => 
+            type.toLowerCase().includes(leadData.condition!.toLowerCase()) ||
+            leadData.condition!.toLowerCase().includes(type.toLowerCase())
+          );
+          if (hasConditionMatch) {
             matchCount++;
             criteriaMatches.condition = true;
             matchReasons.push("🔧 Condition match");
