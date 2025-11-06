@@ -314,6 +314,21 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
           </SelectContent>
         </Select>
       </div>
+
+      <div>
+        <Label>Investment Strategy</Label>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {['Direct Purchase', 'Wholesale', 'Novation', 'Creative / Seller Finance', 'Sub To'].map((strategy) => (
+            <div key={strategy} className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.offer_types.includes(strategy)}
+                onCheckedChange={() => toggleArrayField('offer_types', strategy)}
+              />
+              <Label className="font-normal text-sm">{strategy}</Label>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 

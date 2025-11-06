@@ -414,31 +414,15 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
         </div>
 
         <div>
-          <Label>Offer Types</Label>
+          <Label>Investment Strategy</Label>
           <div className="grid grid-cols-2 gap-2 mt-2">
-            {['Cash', 'Financing', 'Subject To', 'Seller Finance', 'Lease Option', 'Wholesale', 'Assignment'].map((type) => (
-              <div key={type} className="flex items-center space-x-2">
+            {['Direct Purchase', 'Wholesale', 'Novation', 'Creative / Seller Finance', 'Sub To'].map((strategy) => (
+              <div key={strategy} className="flex items-center space-x-2">
                 <Checkbox
-                  checked={formData.offer_types.includes(type)}
-                  onCheckedChange={() => toggleArrayField('offer_types', type)}
+                  checked={formData.offer_types.includes(strategy)}
+                  onCheckedChange={() => toggleArrayField('offer_types', strategy)}
                 />
-                <Label className="font-normal text-sm">{type}</Label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <Label>Business Tags</Label>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            {businessTags.map((tag) => (
-              <div key={tag} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`tag-${tag}`}
-                  checked={formData.tags.includes(tag)}
-                  onCheckedChange={() => toggleArrayField('tags', tag)}
-                />
-                <label htmlFor={`tag-${tag}`} className="text-sm">{tag}</label>
+                <Label className="font-normal text-sm">{strategy}</Label>
               </div>
             ))}
           </div>
@@ -528,21 +512,6 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
                 onCheckedChange={() => toggleArrayField('condition_types', condition)}
               />
               <Label className="font-normal">{condition}</Label>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <Label>Lead Types</Label>
-        <div className="grid grid-cols-2 gap-2 mt-2">
-          {['Probate', 'Pre-Foreclosure', 'Divorce', 'Tax Delinquent', 'Absentee Owner', 'High Equity', 'Vacant', 'Inherited', 'Free and Clear', 'Distressed', 'Motivated Seller'].map(leadType => (
-            <div key={leadType} className="flex items-center space-x-2">
-              <Checkbox
-                checked={formData.lead_types.includes(leadType)}
-                onCheckedChange={() => toggleArrayField('lead_types', leadType)}
-              />
-              <Label className="font-normal text-sm">{leadType}</Label>
             </div>
           ))}
         </div>
