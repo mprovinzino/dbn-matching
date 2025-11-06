@@ -28,12 +28,12 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
     main_poc: "",
     hubspot_url: "",
     coverage_type: "local" as "local" | "multi_state" | "national" | "state",
-    tier: 1,
-    weekly_cap: 0,
+    tier: 5,
+    weekly_cap: 100,
     cold_accepts: false,
     offer_types: [] as string[],
     tags: [] as string[],
-    status: 'active' as 'active' | 'paused' | 'test' | 'inactive',
+    status: 'test' as 'active' | 'paused' | 'test' | 'inactive',
     status_reason: "",
     // Buy Box
     property_types: [] as string[],
@@ -299,6 +299,20 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
             onChange={(e) => updateField('weekly_cap', parseInt(e.target.value))}
           />
         </div>
+      </div>
+      <div>
+        <Label htmlFor="status">Investor Status *</Label>
+        <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="test">Test</SelectItem>
+            <SelectItem value="paused">Paused</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
