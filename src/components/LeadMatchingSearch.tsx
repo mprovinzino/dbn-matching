@@ -39,7 +39,6 @@ interface MatchedInvestor {
   capacityScore: number;
   matchReasons: string[];
   isPrimaryMarket: boolean;
-  isSecondaryMarket: boolean;
   isFullCoverage: boolean;
   isDirectPurchase: boolean;
   locationSpecificity: string;
@@ -88,7 +87,6 @@ export function LeadMatchingSearch() {
         let isFullCoverage = false;
         let isDirectPurchase = false;
         let isPrimaryMarket = false;
-        let isSecondaryMarket = false;
         
         // LOCATION FIT SCORE (0-35 points)
         let locationScore = 0;
@@ -123,16 +121,6 @@ export function LeadMatchingSearch() {
               locationSpecificity = 'direct_zip';
               isDirectPurchase = true;
               matchReasons.push("💵 Direct purchase zip match");
-            }
-          }
-          
-          // Secondary zip = high priority
-          else if (market.market_type === 'secondary' && zipMatch) {
-            if (locationScore < 28) {
-              locationScore = 28;
-              locationSpecificity = 'secondary_zip';
-              isSecondaryMarket = true;
-              matchReasons.push("📍 Secondary market zip match");
             }
           }
           
@@ -262,7 +250,6 @@ export function LeadMatchingSearch() {
           capacityScore,
           matchReasons,
           isPrimaryMarket,
-          isSecondaryMarket,
           isFullCoverage,
           isDirectPurchase,
           locationSpecificity,
@@ -344,7 +331,6 @@ export function LeadMatchingSearch() {
   };
 
   const primaryMarketInvestors = matchedInvestors.filter(inv => inv.isPrimaryMarket);
-  const secondaryMarketInvestors = matchedInvestors.filter(inv => inv.isSecondaryMarket && !inv.isPrimaryMarket);
 
   return (
     <div className="space-y-6">
@@ -553,37 +539,6 @@ export function LeadMatchingSearch() {
                     </p>
                   ) : (
                     primaryMarketInvestors.map((investor) => (
-                      <ExpandableInvestorCard 
-                        key={investor.id} 
-                        investor={investor}
-                        isExpanded={expandedCards.has(investor.id)}
-                        isSelected={selectedInvestors.includes(investor.id)}
-                        onToggleExpand={() => handleToggleExpand(investor.id)}
-                        onSelect={() => handleSelectInvestor(investor.id)}
-                        onDeselect={() => handleDeselectInvestor(investor.id)}
-                        onViewDetails={() => handleInvestorClick(investor.id)}
-                        canSelect={selectedInvestors.length < 3 || selectedInvestors.includes(investor.id)}
-                      />
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Secondary Market Investors */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <TrendingUp className="h-5 w-5 text-amber-500" />
-                    Secondary Market Investors ({secondaryMarketInvestors.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {secondaryMarketInvestors.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No secondary market investors match this lead
-                    </p>
-                  ) : (
-                    secondaryMarketInvestors.map((investor) => (
                       <ExpandableInvestorCard 
                         key={investor.id} 
                         investor={investor}

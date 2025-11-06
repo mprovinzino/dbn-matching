@@ -247,19 +247,7 @@ export async function seedActualInvestors(userId: string) {
         }]);
       }
 
-      // Insert secondary markets
-      if (investorData.markets.secondary) {
-        const secondaryZips: string[] = Array.isArray(investorData.markets.secondary.zip_codes) 
-          ? investorData.markets.secondary.zip_codes 
-          : [];
-
-        await supabase.from('markets').insert([{
-          investor_id: investor.id,
-          market_type: 'secondary',
-          states: investorData.markets.secondary.states,
-          zip_codes: secondaryZips,
-        }]);
-      }
+      // Insert secondary markets - SKIP, now merged into primary
 
       results.push({ success: true, company: investorData.company_name });
     } catch (error) {

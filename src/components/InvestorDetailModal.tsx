@@ -343,30 +343,6 @@ export function InvestorDetailModal({
                   </>
                 )}
 
-                {/* Secondary Markets with DMA */}
-                {currentMarkets.find(m => m.market_type === 'secondary') && (
-                  <>
-                    {currentMarkets.find(m => m.market_type === 'secondary')?.states?.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-sm mb-2 text-amber-600">Secondary Market States</h4>
-                        <div className="flex gap-1 flex-wrap mb-4">
-                          {currentMarkets.find(m => m.market_type === 'secondary')?.states?.map((state: string) => (
-                            <Badge key={state} variant="outline">{state}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <DmaCoverageDisplay
-                      marketType="secondary"
-                      zipCodes={currentMarkets.find(m => m.market_type === 'secondary')?.zip_codes || []}
-                      label="Secondary Market Zip Coverage"
-                      onEdit={() => setEditingZips({ 
-                        type: 'secondary', 
-                        marketId: currentMarkets.find(m => m.market_type === 'secondary')!.id 
-                      })}
-                    />
-                  </>
-                )}
               </CardContent>
             </Card>
           )}
@@ -434,7 +410,7 @@ export function InvestorDetailModal({
             open={!!editingZips}
             onClose={() => setEditingZips(null)}
             marketId={editingZips.marketId}
-            marketType={editingZips.type as "primary" | "secondary" | "direct_purchase"}
+            marketType={editingZips.type as "primary" | "direct_purchase"}
             currentZipCodes={currentMarkets.find(m => m.id === editingZips.marketId)?.zip_codes || []}
             onUpdate={handleZipCodesUpdate}
             referenceSheetUrls={documents

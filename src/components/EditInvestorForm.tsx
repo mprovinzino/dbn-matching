@@ -50,7 +50,6 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
     full_coverage_states: "",
     direct_purchase_markets: "",
     primary_zip_codes: "",
-    secondary_zip_codes: "",
   });
 
   useEffect(() => {
@@ -58,7 +57,6 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
       const fullCoverageMarket = markets?.find(m => m.market_type === 'full_coverage');
       const directPurchaseMarket = markets?.find(m => m.market_type === 'direct_purchase');
       const primaryMarket = markets?.find(m => m.market_type === 'primary');
-      const secondaryMarket = markets?.find(m => m.market_type === 'secondary');
 
       setFormData({
         company_name: investor.company_name || "",
@@ -88,7 +86,6 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
           ...(directPurchaseMarket?.zip_codes || [])
         ].join(', ') || "",
         primary_zip_codes: primaryMarket?.zip_codes?.join(', ') || "",
-        secondary_zip_codes: secondaryMarket?.zip_codes?.join(', ') || "",
       });
     }
   }, [investor, buyBox, markets, open]);
@@ -220,25 +217,6 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
           marketInserts.push({
             investor_id: investor.id,
             market_type: 'primary',
-            states: [],
-            zip_codes: zips,
-          });
-        }
-      }
-
-      // Secondary markets
-      if (formData.secondary_zip_codes) {
-        // Split by comma, space, or newline, trim, and filter out empty strings
-        const zips = formData.secondary_zip_codes
-          .split(/[,\s\n]+/)
-          .map(z => z.trim())
-          .filter(Boolean)
-          .filter(z => /^\d{5}$/.test(z)); // Ensure it's a valid 5-digit zip code
-        
-        if (zips.length > 0) {
-          marketInserts.push({
-            investor_id: investor.id,
-            market_type: 'secondary',
             states: [],
             zip_codes: zips,
           });
@@ -570,18 +548,6 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
         <p className="text-sm text-muted-foreground mt-1">Specific zip codes they actively cover as primary markets</p>
       </div>
       
-      <div>
-        <Label htmlFor="secondary_zips">Secondary Market Zip Codes (comma-separated)</Label>
-        <Textarea
-          id="secondary_zips"
-          placeholder="28001, 28002"
-          value={formData.secondary_zip_codes}
-          onChange={(e) => updateField('secondary_zip_codes', e.target.value)}
-          rows={3}
-        />
-        <p className="text-sm text-muted-foreground mt-1">Zip codes they cover as secondary priority markets</p>
-      </div>
-
       <div>
         <Label htmlFor="buy_box_notes">Additional Notes</Label>
         <Textarea

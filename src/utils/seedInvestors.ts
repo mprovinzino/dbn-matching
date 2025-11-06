@@ -287,16 +287,16 @@ export async function seedInvestors(userId: string) {
         console.error(`Error inserting buy box for ${investorData.companyName}:`, buyBoxError);
       }
 
-      // Insert markets - create a default national market for each
+      // Insert markets - create a default market for each
       const { error: marketError } = await supabase
         .from('markets')
-        .insert({
+        .insert([{
           investor_id: investor.id,
-          market_type: investorData.marketType,
+          market_type: investorData.marketType === 'secondary' ? 'primary' : investorData.marketType,
           states: ['TX', 'FL', 'GA'], // Default sample states
           zip_codes: [],
           dmas: []
-        });
+        }]);
 
       if (marketError) {
         console.error(`Error inserting markets for ${investorData.companyName}:`, marketError);

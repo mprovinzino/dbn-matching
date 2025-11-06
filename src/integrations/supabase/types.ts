@@ -372,7 +372,7 @@ export type Database = {
       app_role: "admin" | "team_member" | "viewer"
       coverage_type: "local" | "multi_state" | "state" | "national"
       investor_status: "active" | "paused" | "test" | "inactive"
-      market_type: "direct_purchase" | "primary" | "secondary" | "full_coverage"
+      market_type: "primary" | "direct_purchase" | "full_coverage"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -503,7 +503,7 @@ export const Constants = {
       app_role: ["admin", "team_member", "viewer"],
       coverage_type: ["local", "multi_state", "state", "national"],
       investor_status: ["active", "paused", "test", "inactive"],
-      market_type: ["direct_purchase", "primary", "secondary", "full_coverage"],
+      market_type: ["primary", "direct_purchase", "full_coverage"],
     },
   },
 } as const

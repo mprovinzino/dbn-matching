@@ -12,7 +12,7 @@ interface ZipCodeManagerProps {
   open: boolean;
   onClose: () => void;
   marketId: string;
-  marketType: "primary" | "secondary" | "direct_purchase";
+  marketType: "primary" | "direct_purchase";
   currentZipCodes: string[];
   onUpdate: () => void;
   referenceSheetUrls?: string[];
@@ -137,7 +137,6 @@ export function ZipCodeManager({
 
   const marketTypeLabel = {
     primary: "Primary Market",
-    secondary: "Secondary Market",
     direct_purchase: "Direct Purchase",
   }[marketType];
 

@@ -50,7 +50,6 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
     full_coverage_states: "",
     direct_purchase_markets: "",
     primary_zip_codes: "",
-    secondary_zip_codes: "",
   });
 
   const updateField = (field: string, value: any) => {
@@ -188,24 +187,6 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
           marketInserts.push({
             investor_id: investor.id,
             market_type: 'primary',
-            states: [],
-            zip_codes: zips,
-          });
-        }
-      }
-
-      // Secondary markets
-      if (formData.secondary_zip_codes) {
-        const zips = formData.secondary_zip_codes
-          .split(/[,\s\n]+/)
-          .map(z => z.trim())
-          .filter(Boolean)
-          .filter(z => /^\d{5}$/.test(z));
-        
-        if (zips.length > 0) {
-          marketInserts.push({
-            investor_id: investor.id,
-            market_type: 'secondary',
             states: [],
             zip_codes: zips,
           });
@@ -454,19 +435,6 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
           placeholder="e.g., 78701 78702 78703"
           value={formData.primary_zip_codes}
           onChange={(e) => updateField('primary_zip_codes', e.target.value)}
-          rows={3}
-        />
-        <p className="text-xs text-muted-foreground">
-          5-digit zip codes only, comma/space/newline separated.
-        </p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="secondary_zips">Secondary Markets - Zip Codes</Label>
-        <Textarea
-          id="secondary_zips"
-          placeholder="e.g., 10001 10002"
-          value={formData.secondary_zip_codes}
-          onChange={(e) => updateField('secondary_zip_codes', e.target.value)}
           rows={3}
         />
         <p className="text-xs text-muted-foreground">
