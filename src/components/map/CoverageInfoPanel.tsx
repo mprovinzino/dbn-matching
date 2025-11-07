@@ -75,9 +75,7 @@ const { data: dmaInvestorsMap, isLoading: isLoadingDmaInvestors } = useQuery({
       dmas.map(async (d) => {
         const { data, error } = await supabase.rpc('get_investors_by_dma', { dma_name: d.dma });
         if (error) throw error;
-        const rows = (data || [])
-          .filter((row: any) => row.status === 'active')
-          .map((row: any) => ({
+        const rows = (data || []).map((row: any) => ({
             id: row.investor_id,
             company_name: row.company_name,
             main_poc: row.main_poc,
@@ -293,11 +291,49 @@ const isLoading = isLoadingDmaInvestors;
             </Accordion>
           ) : (
             <Card>
-              <CardContent className="p-8 text-center">
-                <Building2 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  No DMAs found in this state
-                </p>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <h5 className="text-sm font-medium">Statewide Coverage</h5>
+                </div>
+                {stateData.stateLevelData && stateData.stateLevelData.length > 0 ? (
+                  <div className="space-y-2">
+                    {stateData.stateLevelData
+                      .filter((s: any) => s.market_type === 'full_coverage')
+                      .map((investor: any) => (
+                        <Card 
+                          key={investor.investor_id}
+                          className="cursor-pointer hover:shadow-md transition-all"
+                          onClick={() => navigate(`/?investor=${investor.investor_id}`)}
+                        >
+                          <CardHeader className="p-3 pb-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <CardTitle className="text-xs truncate">
+                                  {investor.investor_name}
+                                </CardTitle>
+                              </div>
+                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getTierColor(investor.tier)}`} />
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-3 pt-0 space-y-1">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <Badge variant="outline" className="text-xs">
+                                Tier {investor.tier}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs capitalize">
+                                National Coverage
+                              </Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-4">
+                    No coverage data available for this state
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
