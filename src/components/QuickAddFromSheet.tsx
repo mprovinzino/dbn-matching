@@ -97,7 +97,7 @@ export function QuickAddFromSheet({ open, onClose, onSuccess }: QuickAddFromShee
       if (parsedData.secondary_states.length > 0) {
         marketInserts.push({
           investor_id: investor.id,
-          market_type: "secondary",
+          market_type: "full_coverage",
           states: parsedData.secondary_states,
           zip_codes: [],
         });
@@ -244,7 +244,7 @@ export function QuickAddFromSheet({ open, onClose, onSuccess }: QuickAddFromShee
                           )}
                           {parsedData.secondary_states.length > 0 && (
                             <div>
-                              <span className="font-medium">Secondary:</span>{" "}
+                              <span className="font-medium">Full Coverage:</span>{" "}
                               {parsedData.secondary_states.includes("ALL_OTHER_STATES")
                                 ? "All other states"
                                 : parsedData.secondary_states.join(", ")}

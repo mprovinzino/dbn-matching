@@ -250,7 +250,7 @@ export function BatchSheetImport() {
             if (row.data.secondary_states.length > 0) {
               marketsToInsert.push({
                 investor_id: row.existingInvestorId,
-                market_type: 'secondary',
+                market_type: 'full_coverage',
                 states: row.data.secondary_states
               });
             }
@@ -315,7 +315,7 @@ export function BatchSheetImport() {
             if (row.data.secondary_states.length > 0) {
               marketsToInsert.push({
                 investor_id: newInvestor.id,
-                market_type: 'secondary',
+                market_type: 'full_coverage',
                 states: row.data.secondary_states
               });
             }

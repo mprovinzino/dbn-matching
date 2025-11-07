@@ -116,7 +116,6 @@ export function useMapCoverage(filters: MapFilters) {
       if (filters.marketType !== 'all') {
         filtered = filtered.filter(dma => {
           if (filters.marketType === 'primary') return dma.primary_count > 0;
-          if (filters.marketType === 'secondary') return dma.secondary_count > 0;
           if (filters.marketType === 'direct_purchase') return dma.direct_count > 0;
           if (filters.marketType === 'full_coverage') return dma.full_coverage_count > 0;
           return true;

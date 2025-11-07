@@ -12,7 +12,7 @@ interface DmaGroup {
 }
 
 interface DmaCoverageDisplayProps {
-  marketType: 'primary' | 'secondary' | 'direct_purchase';
+  marketType: 'primary' | 'full_coverage' | 'direct_purchase';
   zipCodes: string[];
   label: string;
   onEdit?: () => void;
@@ -67,7 +67,7 @@ export function DmaCoverageDisplay({
   const getMarketTypeColor = () => {
     switch (marketType) {
       case 'primary': return 'text-purple-600';
-      case 'secondary': return 'text-amber-600';
+      case 'full_coverage': return 'text-blue-600';
       case 'direct_purchase': return 'text-green-600';
       default: return 'text-foreground';
     }

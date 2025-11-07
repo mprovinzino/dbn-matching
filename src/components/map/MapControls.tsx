@@ -113,21 +113,15 @@ export function MapControls({
             </Label>
           </div>
           <div className="flex items-center space-x-2">
-            <RadioGroupItem value="secondary" id="secondary" />
-            <Label htmlFor="secondary" className="font-normal cursor-pointer">
-              Secondary Only
+            <RadioGroupItem value="full_coverage" id="full_coverage_filter" />
+            <Label htmlFor="full_coverage_filter" className="font-normal cursor-pointer">
+              Full Coverage Only
             </Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="direct_purchase" id="direct" />
             <Label htmlFor="direct" className="font-normal cursor-pointer">
               Direct Purchase
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="full_coverage" id="full" />
-            <Label htmlFor="full" className="font-normal cursor-pointer">
-              Full Coverage
             </Label>
           </div>
         </RadioGroup>
