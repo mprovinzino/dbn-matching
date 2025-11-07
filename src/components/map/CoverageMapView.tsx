@@ -157,7 +157,10 @@ export function CoverageMapView({
           };
         }
         // Add all investor IDs from this DMA to the state's set (already includes national)
-        dma.investor_ids.forEach(id => acc[stateKey].investorIdSet.add(id));
+        (dma.investor_ids || [])
+          .filter(Boolean)
+          .forEach(id => acc[stateKey].investorIdSet.add(String(id)));
+
         acc[stateKey].dmas.push(dma);
         return acc;
       }, {} as Record<string, { investorIdSet: Set<string>; dmas: DmaCoverageData[] }>);
