@@ -28,25 +28,26 @@ export function CoverageInfoPanel({ stateCode, stateData, onClose }: CoverageInf
   const unionIds = new Set([...dmaIds, ...stateLevelIds]);
 
   const nationalIds = new Set(
-    stateData.stateLevelData
-      .filter(s => s.market_type === 'full_coverage')
-      .map(s => s.investor_id)
-  );
+      stateData.stateLevelData
+        .filter(s => s.market_type === 'full_coverage')
+        .map(s => s.investor_id)
+    );
 
-  const overview = {
-    total: unionIds.size,
-    national: nationalIds.size,
-    stateLevel: unionIds.size - nationalIds.size,
-  };
+    // Base overview before fetching per-DMA lists; will be refined after data load
+    const baseOverview = {
+      total: unionIds.size,
+      national: nationalIds.size,
+      stateLevel: unionIds.size - nationalIds.size,
+    };
 
-  console.log(`📊 Side Panel ${stateCode} counts:`, {
-    total: overview.total,
-    national: overview.national,
-    stateLevel: overview.stateLevel,
-    dmaIds: Array.from(dmaIds),
-    stateLevelIds: Array.from(stateLevelIds),
-    unionIds: Array.from(unionIds),
-  });
+    console.log(`📊 Side Panel ${stateCode} base counts:`, {
+      total: baseOverview.total,
+      national: baseOverview.national,
+      stateLevel: baseOverview.stateLevel,
+      dmaIds: Array.from(dmaIds),
+      stateLevelIds: Array.from(stateLevelIds),
+      unionIds: Array.from(unionIds),
+    });
 
 // Build DMA list from coverage passed in from the map (no extra queries)
 const dmas = useMemo(() => {
@@ -152,6 +153,21 @@ const { data: dmaInvestorsMap, isLoading: isLoadingDmaInvestors } = useQuery({
 
 // Report loading state
 const isLoading = isLoadingDmaInvestors;
+
+// Compute final overview from what the user will actually see (deduped across DMA lists)
+const overview = useMemo(() => {
+  if (dmaInvestorsMap) {
+    const allInvestors = Object.values(dmaInvestorsMap).flat();
+    const byId = new Map<string, any>();
+    allInvestors.forEach((inv: any) => byId.set(inv.id, inv));
+    const unique = Array.from(byId.values());
+    const nationalCount = unique.filter((inv: any) => inv.market_type === 'full_coverage' || inv.coverage_type === 'national').length;
+    return { total: unique.length, national: nationalCount, stateLevel: unique.length - nationalCount };
+  }
+  return baseOverview;
+}, [dmaInvestorsMap]);
+
+console.log(`📊 Side Panel ${stateCode} final counts (from UI data):`, overview);
 
   const getTierColor = (tier: number) => {
     if (tier === 1) return "bg-amber-500";
