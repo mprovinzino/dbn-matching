@@ -146,6 +146,7 @@ export function CoverageMapView({
       });
 
       // Group by state using ORIGINAL states (no overrides) and collect unique investor IDs
+      // Note: DMA investor_ids already include national/state-level investors from backend
       const stateData = filteredCoverage.reduce((acc, dma) => {
         const stateKey = dma.state; // Use original state, no overrides
         
@@ -155,22 +156,23 @@ export function CoverageMapView({
             dmas: [],
           };
         }
-        // Add all investor IDs from this DMA to the state's set
+        // Add all investor IDs from this DMA to the state's set (already includes national)
         dma.investor_ids.forEach(id => acc[stateKey].investorIdSet.add(id));
         acc[stateKey].dmas.push(dma);
         return acc;
       }, {} as Record<string, { investorIdSet: Set<string>; dmas: DmaCoverageData[] }>);
 
-      // Merge state-level investors into the stateData (union of DMA + state-level)
+      // For states with ONLY national coverage (no DMAs), add them here
       filteredStateLevel.forEach(item => {
         const stateKey = item.state;
         if (!stateData[stateKey]) {
+          // Only create entry if state has no DMA data (to avoid double-counting)
           stateData[stateKey] = {
-            investorIdSet: new Set<string>(),
+            investorIdSet: new Set<string>([item.investor_id]),
             dmas: [],
           };
         }
-        stateData[stateKey].investorIdSet.add(item.investor_id);
+        // If state already has DMA data, national investors are already counted
       });
 
       // Convert Set size to totalInvestors count
