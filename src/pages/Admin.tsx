@@ -10,8 +10,8 @@ import { UserManagement } from '@/components/admin/UserManagement';
 import { InvestorRelationalViewer } from '@/components/admin/InvestorRelationalViewer';
 
 const Admin = () => {
-  const { isAdmin, loading } = useAdminAccess();
   const navigate = useNavigate();
+  const { isAdmin, loading } = useAdminAccess();
 
   // Check authentication
   useEffect(() => {
