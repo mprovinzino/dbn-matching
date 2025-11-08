@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,11 @@ import { DataQualityDashboard } from '@/components/admin/DataQualityDashboard';
 
 const Admin = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, loading } = useAdminAccess();
+
+  const activeTab = searchParams.get('tab') || 'quality';
+  const investorId = searchParams.get('investorId') || null;
 
   // Check authentication
   useEffect(() => {
@@ -64,7 +68,7 @@ const Admin = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="quality" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(value) => setSearchParams({ tab: value })} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="quality">Data Quality</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
@@ -82,7 +86,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="relations" className="space-y-4 h-[calc(100vh-250px)]">
-            <InvestorRelationalViewer />
+            <InvestorRelationalViewer initialInvestorId={activeTab === 'relations' ? investorId : null} />
           </TabsContent>
 
           <TabsContent value="database" className="space-y-4">

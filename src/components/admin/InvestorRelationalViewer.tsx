@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { InvestorPanel } from "./InvestorPanel";
 import { BuyBoxPanel } from "./BuyBoxPanel";
@@ -8,11 +8,22 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const InvestorRelationalViewer = () => {
-  const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(null);
+interface InvestorRelationalViewerProps {
+  initialInvestorId?: string | null;
+}
+
+export const InvestorRelationalViewer = ({ initialInvestorId }: InvestorRelationalViewerProps = {}) => {
+  const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(initialInvestorId || null);
   const [showDiagram, setShowDiagram] = useState(true);
 
   const { data: relationData, isLoading } = useInvestorWithRelations(selectedInvestorId);
+
+  // Update selected investor when initialInvestorId changes
+  useEffect(() => {
+    if (initialInvestorId) {
+      setSelectedInvestorId(initialInvestorId);
+    }
+  }, [initialInvestorId]);
 
   return (
     <div className="flex flex-col h-full">

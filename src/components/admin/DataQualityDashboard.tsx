@@ -226,8 +226,8 @@ export const DataQualityDashboard = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          // Navigate to investor panel - future enhancement
-                          console.log('Fix issue for:', issue);
+                          const url = `/admin?tab=relations&investorId=${issue.investor_id}`;
+                          window.open(url, '_blank');
                         }}
                       >
                         View
