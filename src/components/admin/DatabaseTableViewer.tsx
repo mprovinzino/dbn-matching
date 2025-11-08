@@ -52,19 +52,56 @@ export const DatabaseTableViewer = () => {
       const start = page * pageSize;
       const end = start + pageSize - 1;
 
-      const { data: tableData, error, count } = await supabase
-        .from(selectedTable as any)
-        .select('*', { count: 'exact' })
-        .range(start, end)
-        .order('created_at', { ascending: false });
+      let query;
+      
+      // For buy_box and markets, join with investors to get company name
+      if (selectedTable === 'buy_box') {
+        query = supabase
+          .from('buy_box')
+          .select('*, investors(company_name)', { count: 'exact' })
+          .range(start, end)
+          .order('created_at', { ascending: false });
+      } else if (selectedTable === 'markets') {
+        query = supabase
+          .from('markets')
+          .select('*, investors(company_name)', { count: 'exact' })
+          .range(start, end)
+          .order('created_at', { ascending: false });
+      } else {
+        query = supabase
+          .from(selectedTable as any)
+          .select('*', { count: 'exact' })
+          .range(start, end)
+          .order('created_at', { ascending: false });
+      }
+
+      const { data: tableData, error, count } = await query;
 
       if (error) throw error;
 
-      setData(tableData || []);
+      // Flatten the joined data
+      let processedData = tableData;
+      if (selectedTable === 'buy_box' || selectedTable === 'markets') {
+        processedData = tableData?.map((row: any) => ({
+          ...row,
+          company_name: row.investors?.company_name || 'Unknown'
+        }));
+      }
+
+      setData(processedData || []);
       setTotalCount(count || 0);
       
-      if (tableData && tableData.length > 0) {
-        setColumns(Object.keys(tableData[0]));
+      if (processedData && processedData.length > 0) {
+        let cols = Object.keys(processedData[0]).filter(k => k !== 'investors');
+        
+        // Reorder columns: company_name first, then investor_id, then others
+        if (selectedTable === 'buy_box' || selectedTable === 'markets') {
+          const priorityCols = ['company_name', 'investor_id'];
+          const otherCols = cols.filter(c => !priorityCols.includes(c));
+          cols = [...priorityCols.filter(c => cols.includes(c)), ...otherCols];
+        }
+        
+        setColumns(cols);
       } else {
         setColumns([]);
       }
@@ -173,11 +210,17 @@ export const DatabaseTableViewer = () => {
     }
   };
 
-  const formatValue = (value: any) => {
+  const formatValue = (value: any, columnName?: string) => {
     if (value === null) return <Badge variant="outline">NULL</Badge>;
     if (typeof value === 'boolean') return value ? '✓' : '✗';
     if (Array.isArray(value)) return value.join(', ');
     if (typeof value === 'object') return JSON.stringify(value);
+    
+    // Truncate UUIDs for readability
+    if (columnName?.includes('_id') && typeof value === 'string' && value.length > 30) {
+      return value.substring(0, 8) + '...' + value.substring(value.length - 4);
+    }
+    
     if (typeof value === 'string' && value.length > 50) {
       return value.substring(0, 50) + '...';
     }
@@ -603,7 +646,7 @@ export const DatabaseTableViewer = () => {
                       >
                         {columns.map((col) => (
                           <TableCell key={col} className="whitespace-nowrap">
-                            {formatValue(row[col])}
+                            {formatValue(row[col], col)}
                           </TableCell>
                         ))}
                         {!isReadOnly && (
@@ -677,7 +720,13 @@ export const DatabaseTableViewer = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {columns.map((key) => (
+            {(selectedTable === 'buy_box' || selectedTable === 'markets') && editedRecord.company_name && (
+              <div className="col-span-2 p-3 bg-muted rounded-md">
+                <Label className="text-xs text-muted-foreground">Investor</Label>
+                <div className="font-medium">{editedRecord.company_name}</div>
+              </div>
+            )}
+            {columns.filter(key => key !== 'company_name').map((key) => (
               <div key={key} className="grid gap-2">
                 <Label htmlFor={key}>{key}</Label>
                 {renderEditField(key, editedRecord[key])}
