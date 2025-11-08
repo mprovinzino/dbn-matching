@@ -8,6 +8,7 @@ import { Shield, Users, Database, Activity } from 'lucide-react';
 import { DatabaseTableViewer } from '@/components/admin/DatabaseTableViewer';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { InvestorRelationalViewer } from '@/components/admin/InvestorRelationalViewer';
+import { DataQualityDashboard } from '@/components/admin/DataQualityDashboard';
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -63,13 +64,18 @@ const Admin = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="quality" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="quality">Data Quality</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="relations">Investor Relations</TabsTrigger>
             <TabsTrigger value="database">Database Tables</TabsTrigger>
             <TabsTrigger value="logs">Activity Logs</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="quality" className="space-y-4">
+            <DataQualityDashboard />
+          </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
             <UserManagement />
