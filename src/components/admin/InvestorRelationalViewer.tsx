@@ -13,17 +13,17 @@ interface InvestorRelationalViewerProps {
 }
 
 export const InvestorRelationalViewer = ({ initialInvestorId }: InvestorRelationalViewerProps = {}) => {
-  const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(initialInvestorId || null);
+  const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(null);
   const [showDiagram, setShowDiagram] = useState(true);
 
   const { data: relationData, isLoading } = useInvestorWithRelations(selectedInvestorId);
 
   // Update selected investor when initialInvestorId changes
   useEffect(() => {
-    if (initialInvestorId) {
+    if (initialInvestorId && initialInvestorId !== selectedInvestorId) {
       setSelectedInvestorId(initialInvestorId);
     }
-  }, [initialInvestorId]);
+  }, [initialInvestorId, selectedInvestorId]);
 
   return (
     <div className="flex flex-col h-full">
