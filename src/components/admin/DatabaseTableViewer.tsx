@@ -74,8 +74,10 @@ export const DatabaseTableViewer = () => {
           )
         );
 
+        // Default to empty map; we'll try to populate it if we have ids
+        let investorMap = new Map<string, string>();
+
         if (investorIds.length > 0) {
-          // Fetch investor names
           const { data: investors, error: investorError } = await supabase
             .from('investors')
             .select('id, company_name')
@@ -83,19 +85,16 @@ export const DatabaseTableViewer = () => {
 
           if (investorError) {
             console.error('Error fetching investors:', investorError);
+          } else if (investors) {
+            investorMap = new Map(investors.map((inv) => [inv.id, inv.company_name]));
           }
-
-          // Create a map for quick lookup
-          const investorMap = new Map(
-            investors?.map((inv) => [inv.id, inv.company_name]) || []
-          );
-
-          // Merge company names into the data
-          processedData = tableData.map((row: any) => ({
-            ...row,
-            company_name: investorMap.get(row.investor_id) || 'Unknown',
-          }));
         }
+
+        // Always add company_name so the column exists even if lookups fail
+        processedData = tableData.map((row: any) => ({
+          ...row,
+          company_name: investorMap.get(row.investor_id) || 'Unknown',
+        }));
       }
 
       setData(processedData || []);
@@ -103,6 +102,11 @@ export const DatabaseTableViewer = () => {
       
       if (processedData && processedData.length > 0) {
         let cols = Object.keys(processedData[0]);
+        
+        // Ensure company_name column exists for these tables
+        if ((selectedTable === 'buy_box' || selectedTable === 'markets') && !cols.includes('company_name')) {
+          cols = ['company_name', ...cols];
+        }
         
         // Reorder columns: company_name first, then investor_id, then others
         if (selectedTable === 'buy_box' || selectedTable === 'markets') {
