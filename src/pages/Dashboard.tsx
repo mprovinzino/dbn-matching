@@ -15,7 +15,7 @@ import { LeadMatchingSearch } from "@/components/LeadMatchingSearch";
 import { QuickAddFromSheet } from "@/components/QuickAddFromSheet";
 import { InvestorDmaSummary } from "@/components/InvestorDmaSummary";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Dashboard = () => {
@@ -35,8 +35,10 @@ const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [sortBy, setSortBy] = useState<string>("name-asc");
   const [allMarkets, setAllMarkets] = useState<Record<string, any[]>>({});
+  const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     // Check authentication
@@ -132,6 +134,25 @@ const Dashboard = () => {
     setSelectedMarkets(markets || []);
     setDetailModalOpen(true);
   };
+
+  // Handle deep linking from Data Quality Dashboard
+  useEffect(() => {
+    const deepLinkInvestorId = searchParams.get('investorId');
+    const deepLinkOpen = searchParams.get('open');
+    
+    if (!deepLinkHandled && deepLinkInvestorId && investors.length > 0) {
+      const investor = investors.find(inv => inv.id === deepLinkInvestorId);
+      if (investor) {
+        handleInvestorClick(investor).then(() => {
+          if (deepLinkOpen === 'edit') {
+            setEditModalOpen(true);
+            setDetailModalOpen(false);
+          }
+          setDeepLinkHandled(true);
+        });
+      }
+    }
+  }, [searchParams, investors, deepLinkHandled]);
 
   const filteredInvestors = investors.filter(investor => {
     const matchesSearch = 

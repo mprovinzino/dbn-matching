@@ -226,7 +226,7 @@ export const DataQualityDashboard = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const url = `/admin?tab=relations&investorId=${issue.investor_id}`;
+                          const url = `/dashboard?investorId=${issue.investor_id}&open=edit`;
                           window.open(url, '_blank');
                         }}
                       >
