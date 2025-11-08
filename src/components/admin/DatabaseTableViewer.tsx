@@ -52,47 +52,57 @@ export const DatabaseTableViewer = () => {
       const start = page * pageSize;
       const end = start + pageSize - 1;
 
-      let query;
-      
-      // For buy_box and markets, join with investors to get company name
-      if (selectedTable === 'buy_box') {
-        query = supabase
-          .from('buy_box')
-          .select('*, investors(company_name)', { count: 'exact' })
-          .range(start, end)
-          .order('created_at', { ascending: false });
-      } else if (selectedTable === 'markets') {
-        query = supabase
-          .from('markets')
-          .select('*, investors(company_name)', { count: 'exact' })
-          .range(start, end)
-          .order('created_at', { ascending: false });
-      } else {
-        query = supabase
-          .from(selectedTable as any)
-          .select('*', { count: 'exact' })
-          .range(start, end)
-          .order('created_at', { ascending: false });
-      }
-
-      const { data: tableData, error, count } = await query;
+      // Fetch base table data
+      const { data: tableData, error, count } = await supabase
+        .from(selectedTable as any)
+        .select('*', { count: 'exact' })
+        .range(start, end)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Flatten the joined data
       let processedData = tableData;
-      if (selectedTable === 'buy_box' || selectedTable === 'markets') {
-        processedData = tableData?.map((row: any) => ({
-          ...row,
-          company_name: row.investors?.company_name || 'Unknown'
-        }));
+
+      // For buy_box and markets, fetch investor names separately and merge
+      if ((selectedTable === 'buy_box' || selectedTable === 'markets') && tableData && tableData.length > 0) {
+        // Extract unique investor IDs
+        const investorIds = Array.from(
+          new Set(
+            tableData
+              .map((row: any) => row.investor_id)
+              .filter((id): id is string => Boolean(id))
+          )
+        );
+
+        if (investorIds.length > 0) {
+          // Fetch investor names
+          const { data: investors, error: investorError } = await supabase
+            .from('investors')
+            .select('id, company_name')
+            .in('id', investorIds);
+
+          if (investorError) {
+            console.error('Error fetching investors:', investorError);
+          }
+
+          // Create a map for quick lookup
+          const investorMap = new Map(
+            investors?.map((inv) => [inv.id, inv.company_name]) || []
+          );
+
+          // Merge company names into the data
+          processedData = tableData.map((row: any) => ({
+            ...row,
+            company_name: investorMap.get(row.investor_id) || 'Unknown',
+          }));
+        }
       }
 
       setData(processedData || []);
       setTotalCount(count || 0);
       
       if (processedData && processedData.length > 0) {
-        let cols = Object.keys(processedData[0]).filter(k => k !== 'investors');
+        let cols = Object.keys(processedData[0]);
         
         // Reorder columns: company_name first, then investor_id, then others
         if (selectedTable === 'buy_box' || selectedTable === 'markets') {
