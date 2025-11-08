@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, Users, Database, Activity } from 'lucide-react';
 import { DatabaseTableViewer } from '@/components/admin/DatabaseTableViewer';
 import { UserManagement } from '@/components/admin/UserManagement';
+import { InvestorRelationalViewer } from '@/components/admin/InvestorRelationalViewer';
 
 const Admin = () => {
   const { isAdmin, loading } = useAdminAccess();
@@ -63,26 +64,22 @@ const Admin = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              User Management
-            </TabsTrigger>
-            <TabsTrigger value="system" className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              System Tools
-            </TabsTrigger>
-            <TabsTrigger value="logs" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Activity Logs
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="relations">Investor Relations</TabsTrigger>
+            <TabsTrigger value="database">Database Tables</TabsTrigger>
+            <TabsTrigger value="logs">Activity Logs</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
             <UserManagement />
           </TabsContent>
 
-          <TabsContent value="system" className="space-y-4">
+          <TabsContent value="relations" className="space-y-4 h-[calc(100vh-250px)]">
+            <InvestorRelationalViewer />
+          </TabsContent>
+
+          <TabsContent value="database" className="space-y-4">
             <DatabaseTableViewer />
           </TabsContent>
 
