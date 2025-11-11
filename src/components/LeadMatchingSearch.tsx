@@ -112,7 +112,6 @@ export function LeadMatchingSearch() {
         // LOCATION MATCH (if entered)
         if (enteredCriteria.includes('location')) {
           let hasLocationMatch = false;
-          const hasNationalCoverage = investor.coverage_type === 'national';
           
           // Check all markets to find the BEST match type
           markets.forEach((market: any) => {
@@ -159,18 +158,25 @@ export function LeadMatchingSearch() {
             }
           });
 
-          // National coverage = lowest priority (check after zip/state checks)
-          if (!hasLocationMatch && hasNationalCoverage) {
-            // Check if they also have state-level awareness
-            const hasStateInNational = markets.some((m: any) => 
+          // True national coverage = lowest priority (check after zip/state checks)
+          // Only match as "national" if they actually have a market with the lead's state
+          // or if they have an empty states array (meaning truly all states)
+          if (!hasLocationMatch) {
+            // Check if any market explicitly lists this state
+            const hasStateInAnyMarket = markets.some((m: any) => 
               m.states?.some((s: string) => s === leadData.state || s.includes(leadData.state))
             );
             
-            if (hasStateInNational) {
+            // Check if they have truly national coverage (market with empty/null states array)
+            const hasTrueNationalMarket = markets.some((m: any) => 
+              !m.states || m.states.length === 0
+            );
+            
+            if (hasStateInAnyMarket) {
               hasLocationMatch = true;
               locationSpecificity = 'national_state';
               matchReasons.push("🌎 National coverage (state aware)");
-            } else {
+            } else if (hasTrueNationalMarket) {
               hasLocationMatch = true;
               locationSpecificity = 'national_only';
               matchReasons.push("🌎 National coverage");
