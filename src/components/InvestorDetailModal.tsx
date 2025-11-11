@@ -114,12 +114,10 @@ export function InvestorDetailModal({
                 <MapPin className="h-4 w-4 mr-2" />
                 View on Map
               </Button>
-              {isAdmin && (
-                <Button variant="outline" size="sm" onClick={onEdit}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              )}
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
             </div>
           </div>
         </DialogHeader>
@@ -313,10 +311,10 @@ export function InvestorDetailModal({
                         marketType="direct_purchase"
                         zipCodes={currentMarkets.find(m => m.market_type === 'direct_purchase')!.zip_codes}
                         label="Direct Purchase Zip Coverage"
-                        onEdit={isAdmin ? () => setEditingZips({ 
-                          type: 'direct_purchase', 
-                          marketId: currentMarkets.find(m => m.market_type === 'direct_purchase')!.id 
-                        }) : undefined}
+                      onEdit={() => setEditingZips({ 
+                        type: 'direct_purchase', 
+                        marketId: currentMarkets.find(m => m.market_type === 'direct_purchase')!.id 
+                      })}
                       />
                     )}
                   </>
@@ -339,10 +337,10 @@ export function InvestorDetailModal({
                       marketType="primary"
                       zipCodes={currentMarkets.find(m => m.market_type === 'primary')?.zip_codes || []}
                       label="Primary Market Zip Coverage"
-                      onEdit={isAdmin ? () => setEditingZips({ 
+                      onEdit={() => setEditingZips({ 
                         type: 'primary', 
                         marketId: currentMarkets.find(m => m.market_type === 'primary')!.id 
-                      }) : undefined}
+                      })}
                     />
                   </>
                 )}
