@@ -230,7 +230,7 @@ export function BatchSheetImport() {
                 price_min: row.data.price_min,
                 price_max: row.data.price_max,
                 notes: row.data.notes
-              });
+              }, { onConflict: 'investor_id' });
 
             if (buyBoxError) throw buyBoxError;
 
