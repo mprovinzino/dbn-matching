@@ -292,6 +292,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_coverage_type: {
+        Args: { investor_uuid: string }
+        Returns: Database["public"]["Enums"]["coverage_type"]
+      }
       get_all_users_with_roles: {
         Args: never
         Returns: {

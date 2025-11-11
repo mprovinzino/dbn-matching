@@ -113,72 +113,40 @@ export function LeadMatchingSearch() {
         if (enteredCriteria.includes('location')) {
           let hasLocationMatch = false;
           
-          // Check all markets to find the BEST match type
-          markets.forEach((market: any) => {
-            const stateMatch = market.states?.some((s: string) => 
-              s === leadData.state || s.includes(leadData.state)
-            );
-            const zipMatch = market.zip_codes?.some((z: string) => 
-              z === leadData.zipCode || z.includes(leadData.zipCode)
-            );
-
-            // Primary zip = highest priority
-            if (market.market_type === 'primary' && zipMatch) {
-              hasLocationMatch = true;
-              locationSpecificity = 'primary_zip';
-              isPrimaryMarket = true;
-              matchReasons.push("🎯 Primary market exact zip match");
-            }
-            // Direct purchase zip = very high priority
-            else if (market.market_type === 'direct_purchase' && zipMatch) {
-              if (locationSpecificity !== 'primary_zip') {
-                hasLocationMatch = true;
-                locationSpecificity = 'direct_zip';
-                isDirectPurchase = true;
-                matchReasons.push("💵 Direct purchase zip match");
-              }
-            }
-            // Full coverage state = medium priority
-            else if (market.market_type === 'full_coverage' && stateMatch) {
-              if (!['primary_zip', 'direct_zip'].includes(locationSpecificity)) {
-                hasLocationMatch = true;
-                locationSpecificity = 'state_coverage';
-                isFullCoverage = true;
-                matchReasons.push("🗺️ Full state coverage");
-              }
-            }
-            // Direct purchase state (no zip match)
-            else if (market.market_type === 'direct_purchase' && stateMatch && !zipMatch) {
-              if (!['primary_zip', 'direct_zip', 'state_coverage'].includes(locationSpecificity)) {
-                hasLocationMatch = true;
-                locationSpecificity = 'direct_state';
-                isDirectPurchase = true;
-                matchReasons.push("💵 Direct purchase state coverage");
-              }
-            }
-          });
-
-          // True national coverage = lowest priority (check after zip/state checks)
-          // Only match as "national" if they actually have a market with the lead's state
-          // or if they have an empty states array (meaning truly all states)
+          // Priority 1: ZIP code match (primary_market or direct_purchase)
+          const hasZipMatch = markets.some((m: any) => 
+            (m.market_type === 'primary' || m.market_type === 'direct_purchase') &&
+            m.zip_codes?.includes(leadData.zipCode)
+          );
+          
+          if (hasZipMatch) {
+            hasLocationMatch = true;
+            locationSpecificity = 'zip';
+            matchReasons.push(`📍 Exact ZIP match (${leadData.zipCode})`);
+          }
+          
+          // Priority 2: State match via full_coverage
           if (!hasLocationMatch) {
-            // Check if any market explicitly lists this state
-            const hasStateInAnyMarket = markets.some((m: any) => 
+            const hasStateInFullCoverage = markets.some((m: any) => 
+              m.market_type === 'full_coverage' &&
               m.states?.some((s: string) => s === leadData.state || s.includes(leadData.state))
             );
             
-            // Check if they have truly national coverage (market with empty/null states array)
-            const hasTrueNationalMarket = markets.some((m: any) => 
-              !m.states || m.states.length === 0
-            );
+            if (hasStateInFullCoverage) {
+              hasLocationMatch = true;
+              locationSpecificity = 'state';
+              matchReasons.push(`🏛️ Full coverage in ${leadData.state}`);
+            }
+          }
+          
+          // Priority 3: National coverage (26+ states in full_coverage = 50%+ of USA)
+          if (!hasLocationMatch) {
+            const fullCoverageMarket = markets.find((m: any) => m.market_type === 'full_coverage');
+            const stateCount = fullCoverageMarket?.states?.length || 0;
             
-            if (hasStateInAnyMarket) {
+            if (stateCount >= 26) {
               hasLocationMatch = true;
-              locationSpecificity = 'national_state';
-              matchReasons.push("🌎 National coverage (state aware)");
-            } else if (hasTrueNationalMarket) {
-              hasLocationMatch = true;
-              locationSpecificity = 'national_only';
+              locationSpecificity = 'national';
               matchReasons.push("🌎 National coverage");
             }
           }
