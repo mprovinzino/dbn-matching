@@ -12,7 +12,7 @@ import { InvestorDetailModal } from "@/components/InvestorDetailModal";
 import { AddInvestorForm } from "@/components/AddInvestorForm";
 import { EditInvestorForm } from "@/components/EditInvestorForm";
 import { LeadMatchingSearch } from "@/components/LeadMatchingSearch";
-import { QuickAddFromSheet } from "@/components/QuickAddFromSheet";
+
 import { InvestorDmaSummary } from "@/components/InvestorDmaSummary";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -31,7 +31,7 @@ const Dashboard = () => {
   const [selectedMarkets, setSelectedMarkets] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles");
-  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  
   const [isAdmin, setIsAdmin] = useState(false);
   const [sortBy, setSortBy] = useState<string>("name-asc");
   const [allMarkets, setAllMarkets] = useState<Record<string, any[]>>({});
@@ -378,15 +378,10 @@ const Dashboard = () => {
             Coverage Map
           </Button>
           {isAdmin && (
-            <>
-              <Button onClick={() => setQuickAddOpen(true)} variant="secondary">
-                Quick Add from Sheet
-              </Button>
-              <Button onClick={() => setAddModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Investor
-              </Button>
-            </>
+            <Button onClick={() => setAddModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Investor
+            </Button>
           )}
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
@@ -524,11 +519,6 @@ const Dashboard = () => {
         onSuccess={loadInvestors}
       />
 
-      <QuickAddFromSheet
-        open={quickAddOpen}
-        onClose={() => setQuickAddOpen(false)}
-        onSuccess={loadInvestors}
-      />
     </div>
   );
 };
