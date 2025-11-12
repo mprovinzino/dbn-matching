@@ -11,6 +11,7 @@ import { InvestorDetailModal } from "@/components/InvestorDetailModal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PROPERTY_TYPES, CONDITION_TYPES } from "@/lib/buyBoxConstants";
 
 interface LeadData {
   state: string;
@@ -201,47 +202,39 @@ export function LeadMatchingSearch() {
           }
         }
 
-        // PROPERTY TYPE MATCH (if entered) - partial match, permissive if empty
+        // PROPERTY TYPE MATCH (if entered) - exact match using standardized values
         if (enteredCriteria.includes('propertyType') && buyBox) {
           const propertyTypes = Array.isArray(buyBox?.property_types) ? buyBox.property_types : [];
-          const hasPropertyTypeMatch = 
-            propertyTypes.length === 0 || 
-            propertyTypes.some(type => {
-              const typeWords = type.toLowerCase().split(/\s+/);
-              const leadWords = leadData.propertyType!.toLowerCase().split(/\s+/);
-              // Match if any significant words overlap (2+ chars)
-              return typeWords.some(tw => 
-                leadWords.some(lw => 
-                  tw.length > 2 && lw.length > 2 && (tw.includes(lw) || lw.includes(tw))
-                )
-              );
-            });
-          if (hasPropertyTypeMatch) {
+          
+          // If buy_box has no property types, it's permissive
+          if (propertyTypes.length === 0) {
             matchCount++;
             criteriaMatches.propertyType = true;
-            matchReasons.push("🏠 Property type match");
+          } else {
+            // Exact string match
+            if (propertyTypes.includes(leadData.propertyType!)) {
+              matchCount++;
+              criteriaMatches.propertyType = true;
+              matchReasons.push("🏠 Property type match");
+            }
           }
         }
 
-        // CONDITION MATCH (if entered) - partial match, permissive if empty
+        // CONDITION MATCH (if entered) - exact match using standardized values
         if (enteredCriteria.includes('condition') && buyBox) {
           const conditionTypes = Array.isArray(buyBox?.condition_types) ? buyBox.condition_types : [];
-          const hasConditionMatch = 
-            conditionTypes.length === 0 || 
-            conditionTypes.some(type => {
-              const typeWords = type.toLowerCase().split(/\s+/);
-              const leadWords = leadData.condition!.toLowerCase().split(/\s+/);
-              // Match if any significant words overlap (2+ chars)
-              return typeWords.some(tw => 
-                leadWords.some(lw => 
-                  tw.length > 2 && lw.length > 2 && (tw.includes(lw) || lw.includes(tw))
-                )
-              );
-            });
-          if (hasConditionMatch) {
+          
+          // If buy_box has no condition types, it's permissive
+          if (conditionTypes.length === 0) {
             matchCount++;
             criteriaMatches.condition = true;
-            matchReasons.push("🔧 Condition match");
+          } else {
+            // Exact string match
+            if (conditionTypes.includes(leadData.condition!)) {
+              matchCount++;
+              criteriaMatches.condition = true;
+              matchReasons.push("🔧 Condition match");
+            }
           }
         }
 
@@ -432,36 +425,33 @@ export function LeadMatchingSearch() {
             <div className="space-y-2">
               <Label htmlFor="propertyType">Property Type</Label>
               <Select
-                value={leadData.propertyType}
+                value={leadData.propertyType ?? ""}
                 onValueChange={(value) => setLeadData({ ...leadData, propertyType: value })}
               >
                 <SelectTrigger id="propertyType">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Single Family">Single Family</SelectItem>
-                  <SelectItem value="Multi Family">Multi Family</SelectItem>
-                  <SelectItem value="Townhouse">Townhouse</SelectItem>
-                  <SelectItem value="Condo">Condo</SelectItem>
-                  <SelectItem value="Land">Land</SelectItem>
+                <SelectContent className="bg-background z-50">
+                  {PROPERTY_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="condition">Condition</Label>
+              <Label htmlFor="condition">Property Condition</Label>
               <Select
-                value={leadData.condition}
+                value={leadData.condition ?? ""}
                 onValueChange={(value) => setLeadData({ ...leadData, condition: value })}
               >
                 <SelectTrigger id="condition">
                   <SelectValue placeholder="Select condition" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Move in Ready with Modern Finishes">Move in Ready with Modern Finishes</SelectItem>
-                  <SelectItem value="Move in Ready with Older Finishes">Move in Ready with Older Finishes</SelectItem>
-                  <SelectItem value="Needs Few Repairs">Needs Few Repairs</SelectItem>
-                  <SelectItem value="Needs Major Repairs">Needs Major Repairs</SelectItem>
+                <SelectContent className="bg-background z-50">
+                  {CONDITION_TYPES.map(condition => (
+                    <SelectItem key={condition} value={condition}>{condition}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

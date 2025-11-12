@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PROPERTY_TYPES, CONDITION_TYPES } from "@/lib/buyBoxConstants";
 
 type BuyBox = Database["public"]["Tables"]["buy_box"]["Row"];
 
@@ -127,31 +129,49 @@ export const BuyBoxPanel = ({ investorId, investorName, buyBox }: BuyBoxPanelPro
         </div>
 
         <div>
-          <Label>Property Types (comma-separated)</Label>
-          <Input
-            value={(formData.property_types || []).join(", ")}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                property_types: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-              })
-            }
-            placeholder="e.g. SFR, Multi-Family, Townhouse"
-          />
+          <Label>Property Types</Label>
+          <div className="space-y-2 mt-2">
+            {PROPERTY_TYPES.map(type => (
+              <div key={type} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={(formData.property_types || []).includes(type)}
+                  onCheckedChange={(checked) => {
+                    const current = formData.property_types || [];
+                    setFormData({
+                      ...formData,
+                      property_types: checked
+                        ? [...current, type]
+                        : current.filter(t => t !== type)
+                    });
+                  }}
+                />
+                <Label className="font-normal text-sm">{type}</Label>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>
-          <Label>Condition Types (comma-separated)</Label>
-          <Input
-            value={(formData.condition_types || []).join(", ")}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                condition_types: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-              })
-            }
-            placeholder="e.g. Move-in Ready, Light Rehab"
-          />
+          <Label>Property Condition</Label>
+          <div className="space-y-2 mt-2">
+            {CONDITION_TYPES.map(condition => (
+              <div key={condition} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={(formData.condition_types || []).includes(condition)}
+                  onCheckedChange={(checked) => {
+                    const current = formData.condition_types || [];
+                    setFormData({
+                      ...formData,
+                      condition_types: checked
+                        ? [...current, condition]
+                        : current.filter(c => c !== condition)
+                    });
+                  }}
+                />
+                <Label className="font-normal text-sm">{condition}</Label>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>

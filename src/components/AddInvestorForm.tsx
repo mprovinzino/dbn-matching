@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { investorFormSchema } from "@/lib/investorValidation";
+import { PROPERTY_TYPES, CONDITION_TYPES } from "@/lib/buyBoxConstants";
 
 interface AddInvestorFormProps {
   open: boolean;
@@ -318,7 +319,7 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
       <div>
         <Label>Property Types</Label>
         <div className="space-y-2 mt-2">
-          {['Single Family Residence', 'Condominiums', 'Townhomes', 'Multi-Family (2-4 units)', 'Multi-Family (5+ units)', 'Land', 'Mobile Home'].map(type => (
+          {PROPERTY_TYPES.map(type => (
             <div key={type} className="flex items-center space-x-2">
               <Checkbox
                 checked={formData.property_types.includes(type)}
@@ -387,7 +388,7 @@ export function AddInvestorForm({ open, onClose, onSuccess }: AddInvestorFormPro
       <div>
         <Label>Property Condition</Label>
         <div className="space-y-2 mt-2">
-          {['Move in Ready with newer finishes', 'Move in Ready with Older Finishes', 'Needs Few Repairs', 'Needs Major Repairs'].map(condition => (
+          {CONDITION_TYPES.map(condition => (
             <div key={condition} className="flex items-center space-x-2">
               <Checkbox
                 checked={formData.condition_types.includes(condition)}
