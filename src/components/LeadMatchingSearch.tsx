@@ -206,10 +206,16 @@ export function LeadMatchingSearch() {
           const propertyTypes = Array.isArray(buyBox?.property_types) ? buyBox.property_types : [];
           const hasPropertyTypeMatch = 
             propertyTypes.length === 0 || 
-            propertyTypes.some(type => 
-              type.toLowerCase().includes(leadData.propertyType!.toLowerCase()) ||
-              leadData.propertyType!.toLowerCase().includes(type.toLowerCase())
-            );
+            propertyTypes.some(type => {
+              const typeWords = type.toLowerCase().split(/\s+/);
+              const leadWords = leadData.propertyType!.toLowerCase().split(/\s+/);
+              // Match if any significant words overlap (2+ chars)
+              return typeWords.some(tw => 
+                leadWords.some(lw => 
+                  tw.length > 2 && lw.length > 2 && (tw.includes(lw) || lw.includes(tw))
+                )
+              );
+            });
           if (hasPropertyTypeMatch) {
             matchCount++;
             criteriaMatches.propertyType = true;
@@ -222,10 +228,16 @@ export function LeadMatchingSearch() {
           const conditionTypes = Array.isArray(buyBox?.condition_types) ? buyBox.condition_types : [];
           const hasConditionMatch = 
             conditionTypes.length === 0 || 
-            conditionTypes.some(type => 
-              type.toLowerCase().includes(leadData.condition!.toLowerCase()) ||
-              leadData.condition!.toLowerCase().includes(type.toLowerCase())
-            );
+            conditionTypes.some(type => {
+              const typeWords = type.toLowerCase().split(/\s+/);
+              const leadWords = leadData.condition!.toLowerCase().split(/\s+/);
+              // Match if any significant words overlap (2+ chars)
+              return typeWords.some(tw => 
+                leadWords.some(lw => 
+                  tw.length > 2 && lw.length > 2 && (tw.includes(lw) || lw.includes(tw))
+                )
+              );
+            });
           if (hasConditionMatch) {
             matchCount++;
             criteriaMatches.condition = true;
