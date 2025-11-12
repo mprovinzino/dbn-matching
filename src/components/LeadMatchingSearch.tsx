@@ -182,7 +182,7 @@ export function LeadMatchingSearch() {
       const enteredCriteria: string[] = [];
       if (leadData.state && leadData.zipCode) enteredCriteria.push('location');
       if (Number.isFinite(leadData.askPrice as number)) enteredCriteria.push('price');
-      if (leadData.yearBuilt) enteredCriteria.push('yearBuilt');
+      if (Number.isFinite(leadData.yearBuilt as number)) enteredCriteria.push('yearBuilt');
       if (leadData.propertyType) enteredCriteria.push('propertyType');
       if (leadData.condition) enteredCriteria.push('condition');
 
@@ -804,7 +804,7 @@ export function LeadMatchingSearch() {
             setSelectedInvestorFullData(null);
           }}
           investor={selectedInvestorFullData}
-          buyBox={selectedInvestorFullData.buy_box?.[0]}
+          buyBox={selectedInvestorFullData.buy_box}
           markets={selectedInvestorFullData.markets || []}
           onEdit={() => {
             // Optionally handle edit functionality
