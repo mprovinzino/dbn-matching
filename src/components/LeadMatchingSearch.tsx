@@ -212,19 +212,13 @@ export function LeadMatchingSearch() {
         let locationSpecificity = 'none';
         
         const markets = investor.markets || [];
-        // Use the most recent buy_box
-        const buyBoxArray = Array.isArray(investor.buy_box) ? investor.buy_box : [];
-        const buyBox = buyBoxArray
-          .slice()
-          .sort((a: any, b: any) => 
-            new Date(b.updated_at || b.created_at).getTime() - 
-            new Date(a.updated_at || a.created_at).getTime()
-          )[0];
+        // buy_box is a one-to-one relationship, so it's an object (or null), not an array
+        const buyBox = investor.buy_box || null;
         
         // DEBUG: Log investor and buy box data
         console.log(`\n=== Checking Investor: ${investor.company_name} ===`);
-        console.log('Raw buy_box array length:', buyBoxArray.length);
-        console.log('Raw buy_box data:', JSON.stringify(buyBoxArray, null, 2));
+        console.log('Raw buy_box data:', buyBox ? 'HAS BUY_BOX' : 'NO BUY_BOX');
+        console.log('Buy_box condition_types:', buyBox?.condition_types);
         console.log('Lead Data:', {
           state: leadData.state,
           zipCode: leadData.zipCode,
