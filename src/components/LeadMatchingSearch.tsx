@@ -14,32 +14,70 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PROPERTY_TYPES, CONDITION_TYPES } from "@/lib/buyBoxConstants";
 
 // Backward-compatibility mappings for legacy values to canonical dropdown values
+const CANON_PROP_MAP: Record<string, string> = Object.fromEntries(
+  PROPERTY_TYPES.map(v => [v.toLowerCase(), v])
+);
+const CANON_COND_MAP: Record<string, string> = Object.fromEntries(
+  CONDITION_TYPES.map(v => [v.toLowerCase(), v])
+);
+
 const PROPERTY_TYPE_ALIASES: Record<string, string> = {
-  // Common legacy variants -> canonical
-  "Condo": "Condominiums",
-  "Condominium": "Condominiums",
-  "Townhouse": "Townhouse",
-  "Townhomes": "Townhouse",
-  "Mobile Home": "Manufactured Home",
-  "Manufactured Home": "Manufactured Home",
-  "Land": "Lots/Land",
-  "Lots/Land": "Lots/Land",
-  "Commercial": "Commercial",
+  // Common legacy variants -> canonical (keys must be lowercase)
+  'condo': 'Condominiums',
+  'condominium': 'Condominiums',
+  'condominiums': 'Condominiums',
+  'single family': 'Single Family Residence',
+  'single-family': 'Single Family Residence',
+  'single family residence': 'Single Family Residence',
+  'sfr': 'Single Family Residence',
+  'townhouse': 'Townhouse',
+  'town home': 'Townhouse',
+  'townhome': 'Townhouse',
+  'townhomes': 'Townhouse',
+  'mobile home': 'Manufactured Home',
+  'mobile home (with land)': 'Manufactured Home',
+  'mobile home (without land)': 'Manufactured Home',
+  'manufactured home': 'Manufactured Home',
+  'land': 'Lots/Land',
+  'lot': 'Lots/Land',
+  'lots': 'Lots/Land',
+  'lots/land': 'Lots/Land',
+  'farm': 'Lots/Land',
+  'commercial': 'Commercial',
+  'commercial (retail)': 'Commercial',
+  'multi-family (2-4 units)': 'Multi-Family (2-4 units)',
+  'multifamily (2-4 units)': 'Multi-Family (2-4 units)',
+  'multi-family residential (duplex - quadplex)': 'Multi-Family (2-4 units)',
+  'multi-family (5+ units)': 'Multi-Family (5+ units)',
+  'multifamily (5+ units)': 'Multi-Family (5+ units)',
+  'multi-family commercial (fiveplex+)': 'Multi-Family (5+ units)',
 };
 
 const CONDITION_ALIASES: Record<string, string> = {
-  "Move in Ready with Older Finishes": "Move in Ready with older finishes",
-  "Move in Ready with older finishes": "Move in Ready with older finishes",
-  "Move in Ready with newer finishes": "Move in Ready with newer finishes",
-  "Needs Few Repairs": "Needs Few Repairs",
-  "Needs Some Repairs": "Needs Some Repairs",
-  "Needs Major Repairs": "Needs Major Repairs",
-  "Tear Down or Complete Gut Rehab": "Tear Down or Complete Gut Rehab",
+  // keys must be lowercase
+  'move in ready with older finishes': 'Move in Ready with older finishes',
+  'move-in ready with older finishes': 'Move in Ready with older finishes',
+  'move in ready with newer finishes': 'Move in Ready with newer finishes',
+  'move-in ready with newer finishes': 'Move in Ready with newer finishes',
+  'move in ready with modern finishes': 'Move in Ready with newer finishes',
+  'move-in ready with modern finishes': 'Move in Ready with newer finishes',
+  'needs few repairs': 'Needs Few Repairs',
+  'needs some repairs': 'Needs Some Repairs',
+  'needs major repairs': 'Needs Major Repairs',
+  'tear down or complete gut rehab': 'Tear Down or Complete Gut Rehab',
 };
 
-const normalizePropertyType = (v?: string) => (v ? (PROPERTY_TYPE_ALIASES[v] || v) : undefined);
-const normalizeCondition = (v?: string) => (v ? (CONDITION_ALIASES[v] || v) : undefined);
+const normalizePropertyType = (v?: string) => {
+  if (!v) return undefined;
+  const key = v.trim().toLowerCase();
+  return PROPERTY_TYPE_ALIASES[key] || CANON_PROP_MAP[key] || v;
+};
 
+const normalizeCondition = (v?: string) => {
+  if (!v) return undefined;
+  const key = v.trim().toLowerCase();
+  return CONDITION_ALIASES[key] || CANON_COND_MAP[key] || v;
+};
 interface LeadData {
   state: string;
   zipCode: string;
