@@ -78,6 +78,45 @@ const normalizeCondition = (v?: string) => {
   const key = v.trim().toLowerCase();
   return CONDITION_ALIASES[key] || CANON_COND_MAP[key] || v;
 };
+
+// Extract canonical values from composite/legacy strings (e.g., "Single Family & Condominiums")
+const extractCanonicalPropertyTypes = (dbValues: string[]): string[] => {
+  const canonical = new Set<string>();
+  dbValues.forEach((v) => {
+    const normalized = normalizePropertyType(v);
+    if (normalized && PROPERTY_TYPES.includes(normalized as any)) {
+      canonical.add(normalized);
+    } else {
+      // Scan for canonical labels within composite strings
+      const lower = v.toLowerCase();
+      PROPERTY_TYPES.forEach((pt) => {
+        if (lower.includes(pt.toLowerCase())) {
+          canonical.add(pt);
+        }
+      });
+    }
+  });
+  return Array.from(canonical);
+};
+
+const extractCanonicalConditions = (dbValues: string[]): string[] => {
+  const canonical = new Set<string>();
+  dbValues.forEach((v) => {
+    const normalized = normalizeCondition(v);
+    if (normalized && CONDITION_TYPES.includes(normalized as any)) {
+      canonical.add(normalized);
+    } else {
+      // Scan for canonical labels within composite strings
+      const lower = v.toLowerCase();
+      CONDITION_TYPES.forEach((ct) => {
+        if (lower.includes(ct.toLowerCase())) {
+          canonical.add(ct);
+        }
+      });
+    }
+  });
+  return Array.from(canonical);
+};
 interface LeadData {
   state: string;
   zipCode: string;
@@ -128,6 +167,7 @@ export function LeadMatchingSearch() {
   const [selectedInvestorFullData, setSelectedInvestorFullData] = useState<any>(null);
   const [selectedInvestors, setSelectedInvestors] = useState<string[]>([]);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [debugMode, setDebugMode] = useState(false);
 
   const handleSearch = async () => {
     if (!leadData.state || !leadData.zipCode) {
@@ -247,77 +287,77 @@ export function LeadMatchingSearch() {
 
         // PRICE MATCH (if entered)
         if (enteredCriteria.includes('price') && buyBox) {
-          const priceMin = Number(buyBox.price_min) || 0;
-          const priceMax = Number(buyBox.price_max) || Infinity;
-          if (leadData.askPrice! >= priceMin && leadData.askPrice! <= priceMax) {
+          const priceMin = Number.isFinite(Number(buyBox.price_min)) ? Number(buyBox.price_min) : -Infinity;
+          const priceMax = Number.isFinite(Number(buyBox.price_max)) ? Number(buyBox.price_max) : Infinity;
+          const leadPrice = leadData.askPrice!;
+          
+          if (Number.isFinite(leadPrice) && leadPrice >= priceMin && leadPrice <= priceMax) {
             matchCount++;
             criteriaMatches.price = true;
             matchReasons.push("💰 Price in range");
+          } else if (Number.isFinite(leadPrice)) {
+            matchReasons.push(`✗ Price outside range ($${leadPrice.toLocaleString()} vs $${priceMin === -Infinity ? '0' : priceMin.toLocaleString()}-$${priceMax === Infinity ? '∞' : priceMax.toLocaleString()})`);
           }
         }
 
         // YEAR BUILT MATCH (if entered)
         if (enteredCriteria.includes('yearBuilt') && buyBox) {
-          const yearMin = Number(buyBox.year_built_min) || 0;
-          const yearMax = Number(buyBox.year_built_max) || 9999;
-          if (leadData.yearBuilt! >= yearMin && leadData.yearBuilt! <= yearMax) {
+          const yearMin = Number.isFinite(Number(buyBox.year_built_min)) ? Number(buyBox.year_built_min) : -Infinity;
+          const yearMax = Number.isFinite(Number(buyBox.year_built_max)) ? Number(buyBox.year_built_max) : Infinity;
+          const leadYear = leadData.yearBuilt!;
+          
+          if (Number.isFinite(leadYear) && leadYear >= yearMin && leadYear <= yearMax) {
             matchCount++;
             criteriaMatches.yearBuilt = true;
             matchReasons.push("📅 Year built match");
+          } else if (Number.isFinite(leadYear)) {
+            matchReasons.push(`✗ Year built outside range (${leadYear} vs ${yearMin === -Infinity ? 'any' : yearMin}-${yearMax === Infinity ? 'any' : yearMax})`);
           }
         }
 
-        // PROPERTY TYPE MATCH (if entered) - exact match using standardized values (with legacy normalization)
+        // PROPERTY TYPE MATCH (if entered) - robust canonicalization for composite DB strings
         if (enteredCriteria.includes('propertyType') && buyBox) {
           const propertyTypes = Array.isArray(buyBox?.property_types) ? buyBox.property_types : [];
-          const propertyTypesNormalized = propertyTypes.map((t: string) => normalizePropertyType(t)!).filter(Boolean);
+          const canonicalTypes = extractCanonicalPropertyTypes(propertyTypes);
           const leadTypeNorm = normalizePropertyType(leadData.propertyType);
           
           // If buy_box has no property types, it's permissive
-          if (propertyTypesNormalized.length === 0) {
+          if (canonicalTypes.length === 0) {
             matchCount++;
             criteriaMatches.propertyType = true;
-          } else if (leadTypeNorm && propertyTypesNormalized.includes(leadTypeNorm)) {
-            // Exact string match after normalization
+          } else if (leadTypeNorm && canonicalTypes.includes(leadTypeNorm)) {
+            // Exact string match after canonicalization
             matchCount++;
             criteriaMatches.propertyType = true;
             matchReasons.push("🏠 Property type match");
+          } else if (leadTypeNorm) {
+            matchReasons.push(`✗ Property type not accepted (${leadTypeNorm} not in [${canonicalTypes.join(', ')}])`);
           }
         }
 
-        // CONDITION MATCH (if entered) - exact match using standardized values (with legacy normalization)
+        // CONDITION MATCH (if entered) - robust canonicalization for composite DB strings
         if (enteredCriteria.includes('condition') && buyBox) {
           const conditionTypes = Array.isArray(buyBox?.condition_types) ? buyBox.condition_types : [];
-          const conditionTypesNormalized = conditionTypes.map((c: string) => normalizeCondition(c)!).filter(Boolean);
+          const canonicalConditions = extractCanonicalConditions(conditionTypes);
           const leadCondNorm = normalizeCondition(leadData.condition);
           
           // If buy_box has no condition types, it's permissive
-          if (conditionTypesNormalized.length === 0) {
+          if (canonicalConditions.length === 0) {
             matchCount++;
             criteriaMatches.condition = true;
-          } else if (leadCondNorm && conditionTypesNormalized.includes(leadCondNorm)) {
-            // Exact string match after normalization
+          } else if (leadCondNorm && canonicalConditions.includes(leadCondNorm)) {
+            // Exact string match after canonicalization
             matchCount++;
             criteriaMatches.condition = true;
             matchReasons.push("🔧 Condition match");
+          } else if (leadCondNorm) {
+            matchReasons.push(`✗ Condition not accepted (${leadCondNorm} not in [${canonicalConditions.join(', ')}])`);
           }
         }
 
-        // Add reasons for criteria that DIDN'T match
+        // Add reasons for criteria that DIDN'T match (for criteria not handled above)
         if (enteredCriteria.includes('location') && !criteriaMatches.location) {
           matchReasons.push("✗ Location not covered");
-        }
-        if (enteredCriteria.includes('price') && !criteriaMatches.price) {
-          matchReasons.push("✗ Price outside range");
-        }
-        if (enteredCriteria.includes('yearBuilt') && !criteriaMatches.yearBuilt) {
-          matchReasons.push("✗ Year built outside range");
-        }
-        if (enteredCriteria.includes('propertyType') && !criteriaMatches.propertyType) {
-          matchReasons.push("✗ Property type not accepted");
-        }
-        if (enteredCriteria.includes('condition') && !criteriaMatches.condition) {
-          matchReasons.push("✗ Condition not accepted");
         }
 
         // Only include investors with at least 1 matching criteria
@@ -348,6 +388,27 @@ export function LeadMatchingSearch() {
           isDirectPurchase,
           locationSpecificity,
         });
+        
+        // Debug logging for top matches
+        if (debugMode && matchCount > 0) {
+          console.debug(`[Match Debug] ${investor.company_name}:`, {
+            entered: enteredCriteria,
+            lead: {
+              price: leadData.askPrice,
+              year: leadData.yearBuilt,
+              propertyType: leadData.propertyType,
+              condition: leadData.condition,
+            },
+            buyBox: buyBox ? {
+              priceRange: [buyBox.price_min, buyBox.price_max],
+              yearRange: [buyBox.year_built_min, buyBox.year_built_max],
+              propertyTypes: buyBox.property_types,
+              conditionTypes: buyBox.condition_types,
+            } : null,
+            criteriaMatches,
+            matchReasons,
+          });
+        }
       });
 
       // Sort by percentage score, then by tier (for ties)
@@ -430,9 +491,19 @@ export function LeadMatchingSearch() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Lead Matching Search
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Lead Matching Search
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDebugMode(!debugMode)}
+              className="text-xs"
+            >
+              Debug {debugMode ? 'ON' : 'OFF'}
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -795,7 +866,14 @@ function ExpandableInvestorCard({
     onToggleExpand();
   };
 
-  const buyBox = fullData?.buy_box?.[0];
+  // Sort buy_box by updated_at/created_at descending to get the most recent one (same as matcher)
+  const buyBoxArray = Array.isArray(fullData?.buy_box) ? fullData.buy_box : [];
+  const buyBox = buyBoxArray
+    .slice()
+    .sort((a: any, b: any) => 
+      new Date(b.updated_at || b.created_at).getTime() - 
+      new Date(a.updated_at || a.created_at).getTime()
+    )[0];
   const markets = fullData?.markets || [];
 
   return (
