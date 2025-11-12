@@ -395,7 +395,7 @@ export function LeadMatchingSearch() {
         }
 
         // CONDITION MATCH (if entered) - robust canonicalization for composite DB strings
-        if (enteredCriteria.includes('condition') && buyBox) {
+        if (enteredCriteria.includes('condition')) {
           const conditionTypes = Array.isArray(buyBox?.condition_types) ? buyBox.condition_types : [];
           const canonicalConditions = extractCanonicalConditions(conditionTypes);
           const leadCondNorm = normalizeCondition(leadData.condition);
