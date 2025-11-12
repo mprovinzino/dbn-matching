@@ -407,12 +407,20 @@ export function LeadMatchingSearch() {
             leadCondNorm: leadCondNorm
           });
           
-          // If buy_box has no condition types, it's permissive
+          // If buy_box has no condition types:
           if (canonicalConditions.length === 0) {
-            matchCount++;
-            criteriaMatches.condition = true;
-            matchReasons.push("🔧 Condition (any accepted)");
-            console.log('✓ Condition: Permissive match (no restrictions)');
+            if (leadCondNorm) {
+              // User specified a condition but investor has none recorded -> treat as NOT accepted (strict)
+              criteriaMatches.condition = false;
+              matchReasons.push("✗ Condition not specified in investor profile");
+              console.log('✗ Condition: Investor has no condition_types; strict mismatch for specified condition');
+            } else {
+              // No condition entered by user -> permissive
+              matchCount++;
+              criteriaMatches.condition = true;
+              matchReasons.push("🔧 Condition (any accepted)");
+              console.log('✓ Condition: Permissive match (no restrictions)');
+            }
           } else if (leadCondNorm && canonicalConditions.includes(leadCondNorm)) {
             // Exact string match after canonicalization
             matchCount++;
