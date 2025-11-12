@@ -192,8 +192,8 @@ export function LeadMatchingSearch() {
 
         // YEAR BUILT MATCH (if entered)
         if (enteredCriteria.includes('yearBuilt') && buyBox) {
-          const yearMin = buyBox.year_built_min || 0;
-          const yearMax = buyBox.year_built_max || 9999;
+          const yearMin = Number(buyBox.year_built_min) || 0;
+          const yearMax = Number(buyBox.year_built_max) || 9999;
           if (leadData.yearBuilt! >= yearMin && leadData.yearBuilt! <= yearMax) {
             matchCount++;
             criteriaMatches.yearBuilt = true;
