@@ -16,7 +16,6 @@ export const CONDITION_TYPES = [
   'Move in Ready with newer finishes',
   'Move in Ready with older finishes',
   'Needs Few Repairs',
-  'Needs Some Repairs',
   'Needs Major Repairs',
   'Tear Down or Complete Gut Rehab',
 ] as const;
