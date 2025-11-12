@@ -25,7 +25,7 @@ export function InvestorDetailModal({
   open, 
   onClose, 
   investor, 
-  buyBox,
+  buyBox: providedBuyBox,
   markets,
   isAdmin = false,
   onEdit
@@ -34,6 +34,15 @@ export function InvestorDetailModal({
   const [documents, setDocuments] = useState<any[]>([]);
   const [editingZips, setEditingZips] = useState<{ type: string; marketId: string } | null>(null);
   const [currentMarkets, setCurrentMarkets] = useState(markets);
+  
+  // Sort buy_box to use the most recent one (same logic as matcher)
+  const buyBoxArray = Array.isArray(providedBuyBox) ? providedBuyBox : (providedBuyBox ? [providedBuyBox] : []);
+  const buyBox = buyBoxArray
+    .slice()
+    .sort((a: any, b: any) => 
+      new Date(b.updated_at || b.created_at).getTime() - 
+      new Date(a.updated_at || a.created_at).getTime()
+    )[0];
 
   useEffect(() => {
     setCurrentMarkets(markets);
