@@ -222,6 +222,23 @@ export function LeadMatchingSearch() {
             new Date(a.updated_at || a.created_at).getTime()
           )[0];
         
+        // Validate buy box ranges
+        if (buyBox) {
+          if (buyBox.year_built_min && buyBox.year_built_max && 
+              Number(buyBox.year_built_min) > Number(buyBox.year_built_max)) {
+            console.warn(`Invalid year range for ${investor.company_name}: ${buyBox.year_built_min} > ${buyBox.year_built_max}`);
+            matchReasons.push("⚠️ Invalid buy box year range");
+            return;
+          }
+          
+          if (buyBox.price_min && buyBox.price_max && 
+              Number(buyBox.price_min) > Number(buyBox.price_max)) {
+            console.warn(`Invalid price range for ${investor.company_name}`);
+            matchReasons.push("⚠️ Invalid buy box price range");
+            return;
+          }
+        }
+        
         // LOCATION MATCH (if entered)
         if (enteredCriteria.includes('location')) {
           let hasLocationMatch = false;
@@ -229,7 +246,7 @@ export function LeadMatchingSearch() {
           // Priority 1: ZIP code match (primary_market or direct_purchase)
           const hasZipMatch = markets.some((m: any) => 
             (m.market_type === 'primary' || m.market_type === 'direct_purchase') &&
-            m.zip_codes?.includes(leadData.zipCode)
+            m.zip_codes?.some((z: string) => z.trim() === leadData.zipCode.trim())
           );
           
           if (hasZipMatch) {
@@ -243,7 +260,7 @@ export function LeadMatchingSearch() {
             const hasStateInFullCoverage = markets.some((m: any) => 
               m.market_type === 'full_coverage' &&
               m.states?.some((s: string) => 
-                (s || '').toUpperCase().trim() === leadData.state.toUpperCase().trim()
+                s.trim().toUpperCase() === leadData.state.toUpperCase()
               )
             );
             
@@ -411,12 +428,15 @@ export function LeadMatchingSearch() {
         }
       });
 
-      // Sort by percentage score, then by tier (for ties)
+      // Sort by percentage score, then by tier, then by company name
       matches.sort((a, b) => {
         if (b.matchScore !== a.matchScore) {
           return b.matchScore - a.matchScore;
         }
-        return a.tier - b.tier; // Lower tier is better
+        if (a.tier !== b.tier) {
+          return a.tier - b.tier; // Lower tier is better
+        }
+        return a.company_name.localeCompare(b.company_name);
       });
       setMatchedInvestors(matches);
     } catch (error) {
@@ -556,7 +576,8 @@ export function LeadMatchingSearch() {
                 value={leadData.yearBuilt ?? ""}
                 onChange={(e) => {
                   const v = e.target.value;
-                  setLeadData({ ...leadData, yearBuilt: v === '' ? undefined : Number(v) });
+                  const n = v === '' ? undefined : Number(v);
+                  setLeadData({ ...leadData, yearBuilt: Number.isFinite(n) ? n : undefined });
                 }}
               />
             </div>
