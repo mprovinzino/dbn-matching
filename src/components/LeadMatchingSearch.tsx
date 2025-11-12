@@ -75,7 +75,7 @@ export function LeadMatchingSearch() {
       // Count how many criteria the user entered
       const enteredCriteria: string[] = [];
       if (leadData.state && leadData.zipCode) enteredCriteria.push('location');
-      if (leadData.askPrice) enteredCriteria.push('price');
+      if (Number.isFinite(leadData.askPrice as number)) enteredCriteria.push('price');
       if (leadData.yearBuilt) enteredCriteria.push('yearBuilt');
       if (leadData.propertyType) enteredCriteria.push('propertyType');
       if (leadData.condition) enteredCriteria.push('condition');
@@ -107,7 +107,14 @@ export function LeadMatchingSearch() {
         let locationSpecificity = 'none';
         
         const markets = investor.markets || [];
-        const buyBox = investor.buy_box?.[0];
+        // Use the most recent buy_box
+        const buyBoxArray = Array.isArray(investor.buy_box) ? investor.buy_box : [];
+        const buyBox = buyBoxArray
+          .slice()
+          .sort((a: any, b: any) => 
+            new Date(b.updated_at || b.created_at).getTime() - 
+            new Date(a.updated_at || a.created_at).getTime()
+          )[0];
         
         // LOCATION MATCH (if entered)
         if (enteredCriteria.includes('location')) {
@@ -129,7 +136,9 @@ export function LeadMatchingSearch() {
           if (!hasLocationMatch) {
             const hasStateInFullCoverage = markets.some((m: any) => 
               m.market_type === 'full_coverage' &&
-              m.states?.some((s: string) => s === leadData.state || s.includes(leadData.state))
+              m.states?.some((s: string) => 
+                (s || '').toUpperCase().trim() === leadData.state.toUpperCase().trim()
+              )
             );
             
             if (hasStateInFullCoverage) {
@@ -141,8 +150,16 @@ export function LeadMatchingSearch() {
           
           // Priority 3: National coverage (26+ states in full_coverage = 50%+ of USA)
           if (!hasLocationMatch) {
-            const fullCoverageMarket = markets.find((m: any) => m.market_type === 'full_coverage');
-            const stateCount = fullCoverageMarket?.states?.length || 0;
+            // Aggregate all distinct states from all full_coverage markets
+            const fullCoverageStates = new Set<string>();
+            markets
+              .filter((m: any) => m.market_type === 'full_coverage' && Array.isArray(m.states))
+              .forEach((m: any) => 
+                m.states.forEach((s: string) => 
+                  fullCoverageStates.add((s || '').toUpperCase().trim())
+                )
+              );
+            const stateCount = fullCoverageStates.size;
             
             if (stateCount >= 26) {
               hasLocationMatch = true;
@@ -184,12 +201,15 @@ export function LeadMatchingSearch() {
           }
         }
 
-        // PROPERTY TYPE MATCH (if entered) - partial match
+        // PROPERTY TYPE MATCH (if entered) - partial match, permissive if empty
         if (enteredCriteria.includes('propertyType') && buyBox) {
-          const hasPropertyTypeMatch = buyBox.property_types?.some(type => 
-            type.toLowerCase().includes(leadData.propertyType!.toLowerCase()) ||
-            leadData.propertyType!.toLowerCase().includes(type.toLowerCase())
-          );
+          const propertyTypes = Array.isArray(buyBox?.property_types) ? buyBox.property_types : [];
+          const hasPropertyTypeMatch = 
+            propertyTypes.length === 0 || 
+            propertyTypes.some(type => 
+              type.toLowerCase().includes(leadData.propertyType!.toLowerCase()) ||
+              leadData.propertyType!.toLowerCase().includes(type.toLowerCase())
+            );
           if (hasPropertyTypeMatch) {
             matchCount++;
             criteriaMatches.propertyType = true;
@@ -197,12 +217,15 @@ export function LeadMatchingSearch() {
           }
         }
 
-        // CONDITION MATCH (if entered) - partial match
+        // CONDITION MATCH (if entered) - partial match, permissive if empty
         if (enteredCriteria.includes('condition') && buyBox) {
-          const hasConditionMatch = buyBox.condition_types?.some(type => 
-            type.toLowerCase().includes(leadData.condition!.toLowerCase()) ||
-            leadData.condition!.toLowerCase().includes(type.toLowerCase())
-          );
+          const conditionTypes = Array.isArray(buyBox?.condition_types) ? buyBox.condition_types : [];
+          const hasConditionMatch = 
+            conditionTypes.length === 0 || 
+            conditionTypes.some(type => 
+              type.toLowerCase().includes(leadData.condition!.toLowerCase()) ||
+              leadData.condition!.toLowerCase().includes(type.toLowerCase())
+            );
           if (hasConditionMatch) {
             matchCount++;
             criteriaMatches.condition = true;
@@ -373,7 +396,11 @@ export function LeadMatchingSearch() {
                 type="number"
                 placeholder="125000"
                 value={leadData.askPrice || ""}
-                onChange={(e) => setLeadData({ ...leadData, askPrice: Number(e.target.value) })}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const n = v === '' ? undefined : Number(v);
+                  setLeadData({ ...leadData, askPrice: Number.isFinite(n) ? n : undefined });
+                }}
               />
             </div>
 
