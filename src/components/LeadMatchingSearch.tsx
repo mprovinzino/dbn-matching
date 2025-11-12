@@ -337,23 +337,25 @@ export function LeadMatchingSearch() {
         }
 
         // YEAR BUILT MATCH (if entered)
-        if (enteredCriteria.includes('yearBuilt') && buyBox) {
-          const yearMin = Number.isFinite(Number(buyBox.year_built_min)) ? Number(buyBox.year_built_min) : -Infinity;
-          const yearMax = Number.isFinite(Number(buyBox.year_built_max)) ? Number(buyBox.year_built_max) : Infinity;
+        if (enteredCriteria.includes('yearBuilt')) {
+          const yMinRaw = buyBox?.year_built_min;
+          const yMaxRaw = buyBox?.year_built_max;
+          const yearMin = Number.isFinite(Number(yMinRaw)) ? Number(yMinRaw) : -Infinity;
+          const yearMax = Number.isFinite(Number(yMaxRaw)) ? Number(yMaxRaw) : Infinity;
           const leadYear = leadData.yearBuilt!;
           
           console.log('Year Built Check:', {
-            leadYear: leadYear,
-            yearMin: yearMin,
-            yearMax: yearMax,
-            buyBox_year_built_min: buyBox.year_built_min,
-            buyBox_year_built_max: buyBox.year_built_max
+            leadYear,
+            yearMin,
+            yearMax,
+            buyBox_year_built_min: yMinRaw,
+            buyBox_year_built_max: yMaxRaw
           });
           
           if (Number.isFinite(leadYear) && leadYear >= yearMin && leadYear <= yearMax) {
             matchCount++;
             criteriaMatches.yearBuilt = true;
-            matchReasons.push("📅 Year built match");
+            matchReasons.push(`📅 Year built (${leadYear})`);
             console.log(`✓ Year Built: Match (${leadYear} in range ${yearMin}-${yearMax})`);
           } else if (Number.isFinite(leadYear)) {
             matchReasons.push(`✗ Year built outside range (${leadYear} vs ${yearMin === -Infinity ? 'any' : yearMin}-${yearMax === Infinity ? 'any' : yearMax})`);
@@ -362,7 +364,7 @@ export function LeadMatchingSearch() {
         }
 
         // PROPERTY TYPE MATCH (if entered) - robust canonicalization for composite DB strings
-        if (enteredCriteria.includes('propertyType') && buyBox) {
+        if (enteredCriteria.includes('propertyType')) {
           const propertyTypes = Array.isArray(buyBox?.property_types) ? buyBox.property_types : [];
           const canonicalTypes = extractCanonicalPropertyTypes(propertyTypes);
           const leadTypeNorm = normalizePropertyType(leadData.propertyType);
