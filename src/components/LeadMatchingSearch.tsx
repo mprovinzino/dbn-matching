@@ -13,6 +13,33 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PROPERTY_TYPES, CONDITION_TYPES } from "@/lib/buyBoxConstants";
 
+// Backward-compatibility mappings for legacy values to canonical dropdown values
+const PROPERTY_TYPE_ALIASES: Record<string, string> = {
+  // Common legacy variants -> canonical
+  "Condo": "Condominiums",
+  "Condominium": "Condominiums",
+  "Townhouse": "Townhouse",
+  "Townhomes": "Townhouse",
+  "Mobile Home": "Manufactured Home",
+  "Manufactured Home": "Manufactured Home",
+  "Land": "Lots/Land",
+  "Lots/Land": "Lots/Land",
+  "Commercial": "Commercial",
+};
+
+const CONDITION_ALIASES: Record<string, string> = {
+  "Move in Ready with Older Finishes": "Move in Ready with older finishes",
+  "Move in Ready with older finishes": "Move in Ready with older finishes",
+  "Move in Ready with newer finishes": "Move in Ready with newer finishes",
+  "Needs Few Repairs": "Needs Few Repairs",
+  "Needs Some Repairs": "Needs Some Repairs",
+  "Needs Major Repairs": "Needs Major Repairs",
+  "Tear Down or Complete Gut Rehab": "Tear Down or Complete Gut Rehab",
+};
+
+const normalizePropertyType = (v?: string) => (v ? (PROPERTY_TYPE_ALIASES[v] || v) : undefined);
+const normalizeCondition = (v?: string) => (v ? (CONDITION_ALIASES[v] || v) : undefined);
+
 interface LeadData {
   state: string;
   zipCode: string;
@@ -202,39 +229,39 @@ export function LeadMatchingSearch() {
           }
         }
 
-        // PROPERTY TYPE MATCH (if entered) - exact match using standardized values
+        // PROPERTY TYPE MATCH (if entered) - exact match using standardized values (with legacy normalization)
         if (enteredCriteria.includes('propertyType') && buyBox) {
           const propertyTypes = Array.isArray(buyBox?.property_types) ? buyBox.property_types : [];
+          const propertyTypesNormalized = propertyTypes.map((t: string) => normalizePropertyType(t)!).filter(Boolean);
+          const leadTypeNorm = normalizePropertyType(leadData.propertyType);
           
           // If buy_box has no property types, it's permissive
-          if (propertyTypes.length === 0) {
+          if (propertyTypesNormalized.length === 0) {
             matchCount++;
             criteriaMatches.propertyType = true;
-          } else {
-            // Exact string match
-            if (propertyTypes.includes(leadData.propertyType!)) {
-              matchCount++;
-              criteriaMatches.propertyType = true;
-              matchReasons.push("🏠 Property type match");
-            }
+          } else if (leadTypeNorm && propertyTypesNormalized.includes(leadTypeNorm)) {
+            // Exact string match after normalization
+            matchCount++;
+            criteriaMatches.propertyType = true;
+            matchReasons.push("🏠 Property type match");
           }
         }
 
-        // CONDITION MATCH (if entered) - exact match using standardized values
+        // CONDITION MATCH (if entered) - exact match using standardized values (with legacy normalization)
         if (enteredCriteria.includes('condition') && buyBox) {
           const conditionTypes = Array.isArray(buyBox?.condition_types) ? buyBox.condition_types : [];
+          const conditionTypesNormalized = conditionTypes.map((c: string) => normalizeCondition(c)!).filter(Boolean);
+          const leadCondNorm = normalizeCondition(leadData.condition);
           
           // If buy_box has no condition types, it's permissive
-          if (conditionTypes.length === 0) {
+          if (conditionTypesNormalized.length === 0) {
             matchCount++;
             criteriaMatches.condition = true;
-          } else {
-            // Exact string match
-            if (conditionTypes.includes(leadData.condition!)) {
-              matchCount++;
-              criteriaMatches.condition = true;
-              matchReasons.push("🔧 Condition match");
-            }
+          } else if (leadCondNorm && conditionTypesNormalized.includes(leadCondNorm)) {
+            // Exact string match after normalization
+            matchCount++;
+            criteriaMatches.condition = true;
+            matchReasons.push("🔧 Condition match");
           }
         }
 
@@ -416,16 +443,19 @@ export function LeadMatchingSearch() {
                 type="number"
                 placeholder="1995"
                 min="1800"
-                max="2025"
-                value={leadData.yearBuilt || ""}
-                onChange={(e) => setLeadData({ ...leadData, yearBuilt: Number(e.target.value) })}
+                max="2100"
+                value={leadData.yearBuilt ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setLeadData({ ...leadData, yearBuilt: v === '' ? undefined : Number(v) });
+                }}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="propertyType">Property Type</Label>
               <Select
-                value={leadData.propertyType ?? ""}
+                value={leadData.propertyType || undefined}
                 onValueChange={(value) => setLeadData({ ...leadData, propertyType: value })}
               >
                 <SelectTrigger id="propertyType">
@@ -442,7 +472,7 @@ export function LeadMatchingSearch() {
             <div className="space-y-2">
               <Label htmlFor="condition">Property Condition</Label>
               <Select
-                value={leadData.condition ?? ""}
+                value={leadData.condition || undefined}
                 onValueChange={(value) => setLeadData({ ...leadData, condition: value })}
               >
                 <SelectTrigger id="condition">
