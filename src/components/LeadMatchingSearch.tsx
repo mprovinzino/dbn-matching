@@ -62,7 +62,6 @@ const CONDITION_ALIASES: Record<string, string> = {
   'move in ready with modern finishes': 'Move in Ready with newer finishes',
   'move-in ready with modern finishes': 'Move in Ready with newer finishes',
   'needs few repairs': 'Needs Few Repairs',
-  'needs some repairs': 'Needs Some Repairs',
   'needs major repairs': 'Needs Major Repairs',
   'tear down or complete gut rehab': 'Tear Down or Complete Gut Rehab',
 };
@@ -224,6 +223,8 @@ export function LeadMatchingSearch() {
         
         // DEBUG: Log investor and buy box data
         console.log(`\n=== Checking Investor: ${investor.company_name} ===`);
+        console.log('Raw buy_box array length:', buyBoxArray.length);
+        console.log('Raw buy_box data:', JSON.stringify(buyBoxArray, null, 2));
         console.log('Lead Data:', {
           state: leadData.state,
           zipCode: leadData.zipCode,
