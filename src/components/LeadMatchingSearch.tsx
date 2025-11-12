@@ -222,6 +222,25 @@ export function LeadMatchingSearch() {
             new Date(a.updated_at || a.created_at).getTime()
           )[0];
         
+        // DEBUG: Log investor and buy box data
+        console.log(`\n=== Checking Investor: ${investor.company_name} ===`);
+        console.log('Lead Data:', {
+          state: leadData.state,
+          zipCode: leadData.zipCode,
+          askPrice: leadData.askPrice,
+          yearBuilt: leadData.yearBuilt,
+          propertyType: leadData.propertyType,
+          condition: leadData.condition
+        });
+        console.log('Buy Box:', buyBox ? {
+          property_types: buyBox.property_types,
+          condition_types: buyBox.condition_types,
+          year_built_min: buyBox.year_built_min,
+          year_built_max: buyBox.year_built_max,
+          price_min: buyBox.price_min,
+          price_max: buyBox.price_max
+        } : 'NO BUY BOX');
+        
         // Validate buy box ranges
         if (buyBox) {
           if (buyBox.year_built_min && buyBox.year_built_max && 
@@ -323,12 +342,22 @@ export function LeadMatchingSearch() {
           const yearMax = Number.isFinite(Number(buyBox.year_built_max)) ? Number(buyBox.year_built_max) : Infinity;
           const leadYear = leadData.yearBuilt!;
           
+          console.log('Year Built Check:', {
+            leadYear: leadYear,
+            yearMin: yearMin,
+            yearMax: yearMax,
+            buyBox_year_built_min: buyBox.year_built_min,
+            buyBox_year_built_max: buyBox.year_built_max
+          });
+          
           if (Number.isFinite(leadYear) && leadYear >= yearMin && leadYear <= yearMax) {
             matchCount++;
             criteriaMatches.yearBuilt = true;
             matchReasons.push("📅 Year built match");
+            console.log(`✓ Year Built: Match (${leadYear} in range ${yearMin}-${yearMax})`);
           } else if (Number.isFinite(leadYear)) {
             matchReasons.push(`✗ Year built outside range (${leadYear} vs ${yearMin === -Infinity ? 'any' : yearMin}-${yearMax === Infinity ? 'any' : yearMax})`);
+            console.log(`✗ Year Built: No match (${leadYear} not in ${yearMin}-${yearMax})`);
           }
         }
 
@@ -338,17 +367,28 @@ export function LeadMatchingSearch() {
           const canonicalTypes = extractCanonicalPropertyTypes(propertyTypes);
           const leadTypeNorm = normalizePropertyType(leadData.propertyType);
           
+          console.log('Property Type Check:', {
+            propertyTypes: propertyTypes,
+            canonicalTypes: canonicalTypes,
+            leadTypeNorm: leadTypeNorm,
+            leadData_propertyType: leadData.propertyType
+          });
+          
           // If buy_box has no property types, it's permissive
           if (canonicalTypes.length === 0) {
             matchCount++;
             criteriaMatches.propertyType = true;
+            matchReasons.push("🏠 Property type (any accepted)");
+            console.log('✓ Property Type: Permissive match (no restrictions)');
           } else if (leadTypeNorm && canonicalTypes.includes(leadTypeNorm)) {
             // Exact string match after canonicalization
             matchCount++;
             criteriaMatches.propertyType = true;
             matchReasons.push("🏠 Property type match");
+            console.log(`✓ Property Type: Match found (${leadTypeNorm})`);
           } else if (leadTypeNorm) {
             matchReasons.push(`✗ Property type not accepted (${leadTypeNorm} not in [${canonicalTypes.join(', ')}])`);
+            console.log(`✗ Property Type: No match (${leadTypeNorm} not in [${canonicalTypes.join(', ')}])`);
           }
         }
 
@@ -358,17 +398,27 @@ export function LeadMatchingSearch() {
           const canonicalConditions = extractCanonicalConditions(conditionTypes);
           const leadCondNorm = normalizeCondition(leadData.condition);
           
+          console.log('Condition Check:', {
+            conditionTypes: conditionTypes,
+            canonicalConditions: canonicalConditions,
+            leadCondNorm: leadCondNorm
+          });
+          
           // If buy_box has no condition types, it's permissive
           if (canonicalConditions.length === 0) {
             matchCount++;
             criteriaMatches.condition = true;
+            matchReasons.push("🔧 Condition (any accepted)");
+            console.log('✓ Condition: Permissive match (no restrictions)');
           } else if (leadCondNorm && canonicalConditions.includes(leadCondNorm)) {
             // Exact string match after canonicalization
             matchCount++;
             criteriaMatches.condition = true;
             matchReasons.push("🔧 Condition match");
+            console.log(`✓ Condition: Match found (${leadCondNorm})`);
           } else if (leadCondNorm) {
             matchReasons.push(`✗ Condition not accepted (${leadCondNorm} not in [${canonicalConditions.join(', ')}])`);
+            console.log(`✗ Condition: No match (${leadCondNorm} not in [${canonicalConditions.join(', ')}])`);
           }
         }
 
@@ -585,7 +635,7 @@ export function LeadMatchingSearch() {
             <div className="space-y-2">
               <Label htmlFor="propertyType">Property Type</Label>
               <Select
-                value={leadData.propertyType || undefined}
+                value={leadData.propertyType ?? ""}
                 onValueChange={(value) => setLeadData({ ...leadData, propertyType: value })}
               >
                 <SelectTrigger id="propertyType">
@@ -602,7 +652,7 @@ export function LeadMatchingSearch() {
             <div className="space-y-2">
               <Label htmlFor="condition">Property Condition</Label>
               <Select
-                value={leadData.condition || undefined}
+                value={leadData.condition ?? ""}
                 onValueChange={(value) => setLeadData({ ...leadData, condition: value })}
               >
                 <SelectTrigger id="condition">
