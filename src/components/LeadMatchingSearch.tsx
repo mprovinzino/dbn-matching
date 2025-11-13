@@ -1062,8 +1062,19 @@ function ExpandableInvestorCard({
               </div>
             )}
 
-            <div className="text-xs text-muted-foreground">
-              <strong>Match reasons:</strong> {investor.matchReasons.join(", ")}
+            <div className="text-xs">
+              <strong className="text-muted-foreground">Match reasons:</strong>{" "}
+              {investor.matchReasons.map((reason, idx) => {
+                const isNegative = reason.includes('✗') || reason.includes('not accepted') || reason.includes('not specified');
+                return (
+                  <span key={idx}>
+                    <span className={isNegative ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}>
+                      {reason}
+                    </span>
+                    {idx < investor.matchReasons.length - 1 && ", "}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </CollapsibleTrigger>
