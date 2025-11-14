@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { investorFormSchema } from "@/lib/investorValidation";
-import { PROPERTY_TYPES, CONDITION_TYPES } from "@/lib/buyBoxConstants";
+import { PROPERTY_TYPES, CONDITION_TYPES, ON_MARKET_STATUS, LEAD_TYPES, TIMEFRAME } from "@/lib/buyBoxConstants";
 
 interface EditInvestorFormProps {
   open: boolean;
@@ -429,7 +429,7 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
       <div>
         <Label>On-Market Status</Label>
         <div className="space-y-2 mt-2">
-          {['Off Market Only', 'FSBO', 'Listed on MLS', 'Any'].map(status => (
+          {ON_MARKET_STATUS.map(status => (
             <div key={status} className="flex items-center space-x-2">
               <Checkbox
                 checked={formData.on_market_status.includes(status)}
@@ -497,9 +497,24 @@ export function EditInvestorForm({ open, onClose, onSuccess, investor, buyBox, m
       </div>
 
       <div>
+        <Label>Lead Types</Label>
+        <div className="space-y-2 mt-2">
+          {LEAD_TYPES.map(leadType => (
+            <div key={leadType} className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.lead_types.includes(leadType)}
+                onCheckedChange={() => toggleArrayField('lead_types', leadType)}
+              />
+              <Label className="font-normal">{leadType}</Label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
         <Label>Purchase Timeframe</Label>
         <div className="space-y-2 mt-2">
-          {['Immediate (0-30 days)', '1-3 months', '3-6 months', '6-12 months', '12+ months', 'Flexible'].map(time => (
+          {TIMEFRAME.map(time => (
             <div key={time} className="flex items-center space-x-2">
               <Checkbox
                 checked={formData.timeframe.includes(time)}

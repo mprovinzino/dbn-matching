@@ -20,5 +20,30 @@ export const CONDITION_TYPES = [
   'Tear Down or Complete Gut Rehab',
 ] as const;
 
+export const ON_MARKET_STATUS = [
+  'Off Market Only',
+  'FSBO',
+  'Listed on MLS',
+  'Any',
+] as const;
+
+export const LEAD_TYPES = [
+  'Warm',
+  'Cold',
+  'Autohunt',
+] as const;
+
+export const TIMEFRAME = [
+  'Immediate (0-30 days)',
+  '1-3 months',
+  '3-6 months',
+  '6-12 months',
+  '12+ months',
+  'Flexible',
+] as const;
+
 export type PropertyType = typeof PROPERTY_TYPES[number];
 export type ConditionType = typeof CONDITION_TYPES[number];
+export type OnMarketStatus = typeof ON_MARKET_STATUS[number];
+export type LeadType = typeof LEAD_TYPES[number];
+export type Timeframe = typeof TIMEFRAME[number];
