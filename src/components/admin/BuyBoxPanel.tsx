@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PROPERTY_TYPES, CONDITION_TYPES } from "@/lib/buyBoxConstants";
+import { PROPERTY_TYPES, CONDITION_TYPES, ON_MARKET_STATUS, LEAD_TYPES, TIMEFRAME } from "@/lib/buyBoxConstants";
 
 type BuyBox = Database["public"]["Tables"]["buy_box"]["Row"];
 
@@ -175,45 +175,72 @@ export const BuyBoxPanel = ({ investorId, investorName, buyBox }: BuyBoxPanelPro
         </div>
 
         <div>
-          <Label>On Market Status (comma-separated)</Label>
-          <Input
-            value={(formData.on_market_status || []).join(", ")}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                on_market_status: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-              })
-            }
-            placeholder="e.g. On Market, Off Market"
-          />
+          <Label>On-Market Status</Label>
+          <div className="space-y-2 mt-2">
+            {ON_MARKET_STATUS.map(status => (
+              <div key={status} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={(formData.on_market_status || []).includes(status)}
+                  onCheckedChange={(checked) => {
+                    const current = formData.on_market_status || [];
+                    setFormData({
+                      ...formData,
+                      on_market_status: checked
+                        ? [...current, status]
+                        : current.filter(s => s !== status)
+                    });
+                  }}
+                />
+                <Label className="font-normal text-sm">{status}</Label>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>
-          <Label>Lead Types (comma-separated)</Label>
-          <Input
-            value={(formData.lead_types || []).join(", ")}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                lead_types: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-              })
-            }
-            placeholder="e.g. Cold, Warm, Hot"
-          />
+          <Label>Lead Types</Label>
+          <div className="space-y-2 mt-2">
+            {LEAD_TYPES.map(leadType => (
+              <div key={leadType} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={(formData.lead_types || []).includes(leadType)}
+                  onCheckedChange={(checked) => {
+                    const current = formData.lead_types || [];
+                    setFormData({
+                      ...formData,
+                      lead_types: checked
+                        ? [...current, leadType]
+                        : current.filter(t => t !== leadType)
+                    });
+                  }}
+                />
+                <Label className="font-normal text-sm">{leadType}</Label>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>
-          <Label>Timeframe (comma-separated)</Label>
-          <Input
-            value={(formData.timeframe || []).join(", ")}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                timeframe: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-              })
-            }
-            placeholder="e.g. Immediate, 30 days, 60 days"
-          />
+          <Label>Purchase Timeframe</Label>
+          <div className="space-y-2 mt-2">
+            {TIMEFRAME.map(time => (
+              <div key={time} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={(formData.timeframe || []).includes(time)}
+                  onCheckedChange={(checked) => {
+                    const current = formData.timeframe || [];
+                    setFormData({
+                      ...formData,
+                      timeframe: checked
+                        ? [...current, time]
+                        : current.filter(t => t !== time)
+                    });
+                  }}
+                />
+                <Label className="font-normal text-sm">{time}</Label>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>
