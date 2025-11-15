@@ -115,6 +115,8 @@ export type Database = {
           coverage_type: Database["public"]["Enums"]["coverage_type"]
           created_at: string
           freeze_reason: string | null
+          hubspot_company_id: string | null
+          hubspot_contact_id: string | null
           hubspot_url: string | null
           id: string
           main_poc: string
@@ -135,6 +137,8 @@ export type Database = {
           coverage_type: Database["public"]["Enums"]["coverage_type"]
           created_at?: string
           freeze_reason?: string | null
+          hubspot_company_id?: string | null
+          hubspot_contact_id?: string | null
           hubspot_url?: string | null
           id?: string
           main_poc: string
@@ -155,6 +159,8 @@ export type Database = {
           coverage_type?: Database["public"]["Enums"]["coverage_type"]
           created_at?: string
           freeze_reason?: string | null
+          hubspot_company_id?: string | null
+          hubspot_contact_id?: string | null
           hubspot_url?: string | null
           id?: string
           main_poc?: string
@@ -170,6 +176,65 @@ export type Database = {
           weekly_cap?: number
         }
         Relationships: []
+      }
+      lead_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          attached_at: string | null
+          attachment_status: string | null
+          calculated_score: number
+          deal_id: string
+          hubspot_company_id: string | null
+          hubspot_connection_id: string | null
+          id: string
+          investor_id: string
+          location_specificity: string | null
+          match_quality_score: number
+          match_reasons: string[] | null
+          score_overridden: boolean | null
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          attached_at?: string | null
+          attachment_status?: string | null
+          calculated_score: number
+          deal_id: string
+          hubspot_company_id?: string | null
+          hubspot_connection_id?: string | null
+          id?: string
+          investor_id: string
+          location_specificity?: string | null
+          match_quality_score: number
+          match_reasons?: string[] | null
+          score_overridden?: boolean | null
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          attached_at?: string | null
+          attachment_status?: string | null
+          calculated_score?: number
+          deal_id?: string
+          hubspot_company_id?: string | null
+          hubspot_connection_id?: string | null
+          id?: string
+          investor_id?: string
+          location_specificity?: string | null
+          match_quality_score?: number
+          match_reasons?: string[] | null
+          score_overridden?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_assignments_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       markets: {
         Row: {
@@ -211,6 +276,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      matching_queue: {
+        Row: {
+          address: string | null
+          arv: number | null
+          ask_price: number | null
+          assigned_to_matcher: string | null
+          autosourcer_id: string | null
+          city: string | null
+          condition: string | null
+          created_at: string
+          deal_id: string
+          deal_name: string
+          id: string
+          investors_attached: number | null
+          investors_requested: number | null
+          matched_at: string | null
+          partial_match_reason: string | null
+          property_type: string | null
+          state: string
+          status: string
+          updated_at: string
+          year_built: number | null
+          zip_code: string
+        }
+        Insert: {
+          address?: string | null
+          arv?: number | null
+          ask_price?: number | null
+          assigned_to_matcher?: string | null
+          autosourcer_id?: string | null
+          city?: string | null
+          condition?: string | null
+          created_at?: string
+          deal_id: string
+          deal_name: string
+          id?: string
+          investors_attached?: number | null
+          investors_requested?: number | null
+          matched_at?: string | null
+          partial_match_reason?: string | null
+          property_type?: string | null
+          state: string
+          status?: string
+          updated_at?: string
+          year_built?: number | null
+          zip_code: string
+        }
+        Update: {
+          address?: string | null
+          arv?: number | null
+          ask_price?: number | null
+          assigned_to_matcher?: string | null
+          autosourcer_id?: string | null
+          city?: string | null
+          condition?: string | null
+          created_at?: string
+          deal_id?: string
+          deal_name?: string
+          id?: string
+          investors_attached?: number | null
+          investors_requested?: number | null
+          matched_at?: string | null
+          partial_match_reason?: string | null
+          property_type?: string | null
+          state?: string
+          status?: string
+          updated_at?: string
+          year_built?: number | null
+          zip_code?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -296,6 +433,7 @@ export type Database = {
         Args: { investor_uuid: string }
         Returns: Database["public"]["Enums"]["coverage_type"]
       }
+      extract_hubspot_company_id: { Args: { url: string }; Returns: string }
       get_all_users_with_roles: {
         Args: never
         Returns: {
