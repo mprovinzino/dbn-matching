@@ -1,1 +1,10 @@
 project_id = "xilfsjvknmwcjfizthjt"
+
+[functions.hubspot-webhook-receiver]
+verify_jwt = false
+
+[functions.attach-investor-to-deal]
+verify_jwt = true
+
+[functions.complete-deal-matching]
+verify_jwt = true
