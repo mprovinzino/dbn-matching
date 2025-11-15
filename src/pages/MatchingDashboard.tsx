@@ -5,8 +5,9 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Search, ArrowRight, Clock, CheckCircle2 } from 'lucide-react';
+import { Search, ArrowRight, Clock, CheckCircle2, Inbox } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function MatchingDashboard() {
   const [searchId, setSearchId] = useState('');
@@ -66,13 +67,44 @@ export default function MatchingDashboard() {
 
           <TabsContent value={statusFilter} className="space-y-4 mt-6">
             {isLoading ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Loading deals...
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-6 w-48" />
+                          <Skeleton className="h-5 w-20" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          {[1, 2, 3, 4, 5, 6].map((j) => (
+                            <Skeleton key={j} className="h-4 w-32" />
+                          ))}
+                        </div>
+                      </div>
+                      <Skeleton className="h-10 w-32 ml-6" />
+                    </div>
+                  </Card>
+                ))}
               </div>
             ) : filteredItems?.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No deals found in this status
-              </div>
+              <Card className="p-12">
+                <div className="flex flex-col items-center justify-center text-center space-y-3">
+                  <div className="rounded-full bg-muted p-4">
+                    <Inbox className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-lg">No deals found</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      {statusFilter === 'pending' 
+                        ? "There are no pending deals waiting to be matched."
+                        : statusFilter === 'in_progress'
+                        ? "No deals are currently being processed."
+                        : "No deals have been completed yet."}
+                    </p>
+                  </div>
+                </div>
+              </Card>
             ) : (
               filteredItems?.map((item) => (
                 <Card key={item.id} className="p-6 hover:shadow-lg transition-shadow">
