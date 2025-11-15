@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MapPin, Home, DollarSign, Calendar, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Home, DollarSign, Calendar, CheckCircle2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface InvestorMatch {
   id: string;
@@ -167,8 +168,44 @@ export default function DealMatchView() {
 
   if (loadingQueue || loadingInvestors) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading deal details...</p>
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <Skeleton className="h-10 w-32" />
+          <Card className="p-6">
+            <div className="flex items-start justify-between mb-6">
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+              <Skeleton className="h-6 w-24" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-32" />
+                </div>
+              ))}
+            </div>
+          </Card>
+          <Card className="p-6">
+            <Skeleton className="h-6 w-48 mb-4" />
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-48" />
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-64" />
+                    </div>
+                    <Skeleton className="h-10 w-24" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -267,9 +304,17 @@ export default function DealMatchView() {
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Available Investors</h3>
           {availableInvestors.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">
-              No more matching investors available
-            </p>
+            <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+              <div className="rounded-full bg-muted p-4">
+                <Users className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold">No matching investors available</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  All matching investors have been attached to this deal, or there are no active investors that match the deal criteria.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="space-y-4">
               {availableInvestors.map(investor => (
